@@ -4,7 +4,7 @@
  *
  * Handles:
  *  - Dependency checks (WooCommerce, Elementor)
- *  - Loading the right classes at the right hooks
+ *  - Proper hook timing via plugins_loaded
  *  - HPOS compatibility declaration
  *
  * @package KinboniPro
@@ -19,28 +19,44 @@ class Kinboni_Loader {
 	 */
 	public static function init(): void {
 
-		// HPOS compatibility declaration.
+		// 1. HPOS compatibility declaration (must hook before or during before_woocommerce_init).
 		add_action( 'before_woocommerce_init', [ __CLASS__, 'declare_hpos_compat' ] );
 
-		// Dependency admin notices.
-		add_action( 'admin_notices', [ __CLASS__, 'dependency_notices' ] );
-
-		// Load modules on the right hooks.
+		// 2. Load module class files.
 		self::load_includes();
 
-		// Frontend assets.
+		// 3. Frontend & Editor assets.
 		Kinboni_Assets::init();
 
-		// Elementor widgets (only if Elementor is available).
-		add_action( 'elementor/loaded', [ 'Kinboni_Elementor', 'init' ] );
+		// 4. AJAX endpoints.
+		Kinboni_Ajax::init();
 
-		// WooCommerce hooks (only if WC is active).
+		// 5. Orchestrate WooCommerce & Elementor after all active plugins are loaded.
+		add_action( 'plugins_loaded', [ __CLASS__, 'on_plugins_loaded' ], 10 );
+
+		// 6. Dependency admin notices (for administrators).
+		add_action( 'admin_notices', [ __CLASS__, 'dependency_notices' ] );
+	}
+
+	/**
+	 * Run initialization after all active plugins are loaded.
+	 * Resolves plugin loading order issues.
+	 */
+	public static function on_plugins_loaded(): void {
+
+		// ── Elementor Initialization ─────────────────────────
+		// If Elementor is active, did_action('elementor/loaded') is already true here.
+		if ( did_action( 'elementor/loaded' ) ) {
+			Kinboni_Elementor::init();
+		} else {
+			// In case Elementor loads later on a custom priority.
+			add_action( 'elementor/loaded', [ 'Kinboni_Elementor', 'init' ] );
+		}
+
+		// ── WooCommerce Initialization ───────────────────────
 		if ( self::is_wc_active() ) {
 			Kinboni_WooCommerce::init();
 		}
-
-		// AJAX endpoints (always register — they do their own WC checks).
-		Kinboni_Ajax::init();
 	}
 
 	/**
@@ -72,16 +88,20 @@ class Kinboni_Loader {
 	 * Show admin notices for missing dependencies.
 	 */
 	public static function dependency_notices(): void {
-		if ( ! did_action( 'elementor/loaded' ) ) {
+		if ( ! current_user_can( 'activate_plugins' ) ) {
+			return;
+		}
+
+		if ( ! self::is_elementor_active() ) {
 			printf(
 				'<div class="notice notice-warning is-dismissible"><p><strong>KINBONI Pro:</strong> %s</p></div>',
-				esc_html__( 'Elementor plugin is required. Please install and activate Elementor.', 'kinboni-pro' )
+				esc_html__( 'Elementor plugin is required. Please install and activate Elementor to use KINBONI widgets.', 'kinboni-pro' )
 			);
 		}
 		if ( ! self::is_wc_active() ) {
 			printf(
 				'<div class="notice notice-warning is-dismissible"><p><strong>KINBONI Pro:</strong> %s</p></div>',
-				esc_html__( 'WooCommerce plugin is required. Please install and activate WooCommerce.', 'kinboni-pro' )
+				esc_html__( 'WooCommerce plugin is required. Please install and activate WooCommerce for store features.', 'kinboni-pro' )
 			);
 		}
 	}
@@ -97,7 +117,7 @@ class Kinboni_Loader {
 	 * Check if Elementor is active.
 	 */
 	public static function is_elementor_active(): bool {
-		return did_action( 'elementor/loaded' );
+		return did_action( 'elementor/loaded' ) > 0;
 	}
 }
 

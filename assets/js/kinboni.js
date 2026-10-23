@@ -33,6 +33,11 @@
 
 			if ( this._active ) this.close();
 
+			// Append to document.body to prevent clipping by transformed/overflow-hidden Elementor parents.
+			if ( el.parentNode !== document.body ) {
+				document.body.appendChild( el );
+			}
+
 			el.classList.add( 'is-open' );
 			document.body.classList.add( 'kb-modal-open' );
 			this._active = el;

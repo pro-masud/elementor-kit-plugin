@@ -24,6 +24,24 @@ class Kinboni_Assets {
 
 		// Main stylesheet.
 		wp_enqueue_style(
+			'font-cormorant', 'fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap',
+			[],
+			KINBONI_VERSION
+		);
+		wp_enqueue_style(
+			'swiper-bundle', '//cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css',
+			[],
+			KINBONI_VERSION
+		);
+
+		wp_enqueue_style(
+			'kinboni-pro-output',
+			KINBONI_URL . 'assets/css/output.css',
+			[],
+			KINBONI_VERSION
+		);
+
+		wp_enqueue_style(
 			'kinboni-pro',
 			KINBONI_URL . 'assets/css/kinboni.css',
 			[],
@@ -32,9 +50,9 @@ class Kinboni_Assets {
 
 		// Main script.
 		wp_enqueue_script(
-			'kinboni-pro',
-			KINBONI_URL . 'assets/js/kinboni.js',
-			[ 'jquery' ],
+			'app-pro',
+			KINBONI_URL . 'assets/js/app.js',
+			[  ],
 			KINBONI_VERSION,
 			true
 		);
@@ -47,8 +65,23 @@ class Kinboni_Assets {
 	 * Enqueue styles inside Elementor editor preview.
 	 */
 	public static function enqueue_editor(): void {
+
+		// Main stylesheet.
 		wp_enqueue_style(
-			'kinboni-pro-editor',
+			'kinboni-pro-output', '//cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css',
+			[],
+			KINBONI_VERSION
+		);
+
+		wp_enqueue_style(
+			'kinboni-pro-output',
+			KINBONI_URL . 'assets/css/output.css',
+			[],
+			KINBONI_VERSION
+		);
+
+		wp_enqueue_style(
+			'kinboni-pro',
 			KINBONI_URL . 'assets/css/kinboni.css',
 			[],
 			KINBONI_VERSION
@@ -61,18 +94,17 @@ class Kinboni_Assets {
 	 * @return array<string, mixed>
 	 */
 	private static function get_js_data(): array {
-		$data = [
+		$currency = '৳';
+		if ( function_exists( 'get_woocommerce_currency_symbol' ) ) {
+			$currency = get_woocommerce_currency_symbol();
+		}
+
+		return [
 			'ajax_url' => admin_url( 'admin-ajax.php' ),
 			'nonce'    => wp_create_nonce( 'kinboni_nonce' ),
 			'home_url' => home_url( '/' ),
+			'currency' => $currency,
 		];
-
-		// Add WooCommerce data only if available.
-		if ( Kinboni_Loader::is_wc_active() ) {
-			$data['currency'] = get_woocommerce_currency_symbol();
-		}
-
-		return $data;
 	}
 }
 

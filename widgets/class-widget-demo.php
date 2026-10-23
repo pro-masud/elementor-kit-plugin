@@ -142,71 +142,96 @@ class Widget_Demo extends \Elementor\Widget_Base {
 	protected function render(): void {
 		$s = $this->get_settings_for_display();
 
-		$uid   = 'kb-modal-' . $this->get_id();
-		$img   = ! empty( $s['image']['url'] ) ? esc_url( $s['image']['url'] ) : '';
-		$title = esc_html( $s['title'] );
-		$desc  = esc_html( $s['description'] );
-		$price = esc_html( $s['price'] );
-		$badge = esc_html( $s['badge_text'] );
-		$btn   = esc_html( $s['button_text'] );
-		$modal = wp_kses_post( $s['modal_description'] );
+		$uid          = 'kb-modal-' . $this->get_id();
+		$img          = ! empty( $s['image']['url'] ) ? esc_url( $s['image']['url'] ) : '';
+		$title        = esc_html( $s['title'] );
+		$desc         = nl2br( esc_html( $s['description'] ) );
+		$price        = esc_html( $s['price'] );
+		$badge        = esc_html( $s['badge_text'] );
+		$btn          = esc_html( $s['button_text'] );
+		$modal        = wp_kses_post( $s['modal_description'] );
+		$accent_color = ! empty( $s['accent_color'] ) ? sanitize_hex_color( $s['accent_color'] ) : '#C5A028';
+		$card_bg      = ! empty( $s['card_bg'] ) ? sanitize_hex_color( $s['card_bg'] ) : '#ffffff';
+		$title_color  = ! empty( $s['title_color'] ) ? sanitize_hex_color( $s['title_color'] ) : '#1a1a1a';
+
+		$modal_styles = sprintf(
+			'--kb-gold: %s; --kb-surface: %s; --kb-text: %s;',
+			$accent_color,
+			$card_bg,
+			$title_color
+		);
 		?>
 
-		<!-- ── Card ──────────────────────────────────── -->
-		<div class="kb-card">
-			<?php if ( $img ) : ?>
-			<div class="kb-card__image-wrap">
-				<img src="<?php echo $img; ?>" alt="<?php echo $title; ?>" class="kb-card__image" loading="lazy">
-				<?php if ( $badge ) : ?>
-					<span class="kb-card__badge"><?php echo $badge; ?></span>
-				<?php endif; ?>
-			</div>
-			<?php endif; ?>
+		  <header id="site-header" class="sticky top-0 z-40 w-full transition-all duration-300 bg-[#FAF8F5]/90 dark:bg-[#0E0E10]/90 backdrop-blur-md border-b border-stone-200/70 dark:border-stone-800/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-[72px] gap-4 sm:gap-6">
+        
+        <!-- Mobile Menu Hamburger Button -->
+        <div class="flex items-center lg:hidden">
+          <button id="mobile-menu-btn" type="button" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors" aria-label="Open mobile navigation menu">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+        </div>
 
-			<div class="kb-card__body">
-				<h3 class="kb-card__title"><?php echo $title; ?></h3>
-				<p class="kb-card__desc"><?php echo $desc; ?></p>
-				<div class="kb-card__footer">
-					<span class="kb-card__price"><?php echo $price; ?></span>
-					<button class="kb-btn" data-modal="<?php echo esc_attr( $uid ); ?>">
-						<?php echo $btn; ?>
-					</button>
-				</div>
-			</div>
-		</div>
+        <!-- Brand Monogram & Wordmark Logo -->
+        <a href="#hero" class="group flex items-center gap-2 sm:gap-3 flex-shrink-0" aria-label="Kinboni home">
+          <span class="hidden sm:grid place-items-center w-10 h-10 rounded-full bg-stone-900 dark:bg-gold-400 text-gold-300 dark:text-stone-950 font-serif text-xl font-semibold shadow-sm transition-transform group-hover:scale-105">K</span>
+          <span class="flex flex-col leading-none">
+            <span class="font-serif text-xl sm:text-[26px] font-semibold tracking-[0.2em] sm:tracking-[0.22em] text-stone-900 dark:text-white group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">KINBONI</span>
+            <span class="text-[8px] sm:text-[9px] tracking-[0.35em] sm:tracking-[0.4em] text-gold-600 dark:text-gold-400 font-semibold mt-0.5 sm:mt-1">HAUTE ATELIER</span>
+          </span>
+        </a>
 
-		<!-- ── Modal ─────────────────────────────────── -->
-		<div id="<?php echo esc_attr( $uid ); ?>" class="kb-modal" role="dialog" aria-modal="true" aria-label="<?php echo $title; ?>">
-			<div class="kb-modal__backdrop" data-close-modal></div>
-			<div class="kb-modal__box">
-				<button class="kb-modal__close" data-close-modal aria-label="<?php esc_attr_e( 'Close', 'kinboni-pro' ); ?>">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-				</button>
+        <!-- Desktop Navigation Links -->
+        <nav class="hidden lg:flex items-center gap-8 xl:gap-9" aria-label="Main navigation">
+          <a href="#hero" class="relative text-[13px] font-semibold tracking-wide text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:w-0 after:bg-gold-500 after:transition-all hover:after:w-full">Home</a>
+          <a href="#categories" class="relative text-[13px] font-semibold tracking-wide text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:w-0 after:bg-gold-500 after:transition-all hover:after:w-full">Collections</a>
+          <a href="#featured" class="relative text-[13px] font-semibold tracking-wide text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:w-0 after:bg-gold-500 after:transition-all hover:after:w-full">Featured</a>
+          <a href="#bestsellers" class="relative text-[13px] font-semibold tracking-wide text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:w-0 after:bg-gold-500 after:transition-all hover:after:w-full">Best Sellers</a>
+          <a href="#heritage" class="relative text-[13px] font-semibold tracking-wide text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:w-0 after:bg-gold-500 after:transition-all hover:after:w-full">Our Story</a>
+          <a href="#testimonials" class="relative text-[13px] font-semibold tracking-wide text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:w-0 after:bg-gold-500 after:transition-all hover:after:w-full">Patrons</a>
+        </nav>
 
-				<div class="kb-modal__inner">
-					<?php if ( $img ) : ?>
-					<div class="kb-modal__media">
-						<img src="<?php echo $img; ?>" alt="<?php echo $title; ?>">
-					</div>
-					<?php endif; ?>
+        <!-- Right Action Icons (Search, Theme, Account, Wishlist, Bag) -->
+        <div class="flex items-center gap-1 sm:gap-2">
+          
+          <!-- Search Button (Pill on Desktop, Icon on Mobile) -->
+          <button type="button" class="open-search-btn hidden md:flex items-center gap-2 pl-3.5 pr-4 py-2 rounded-full border border-stone-300 dark:border-stone-700 text-xs text-stone-500 dark:text-stone-400 hover:border-gold-500 hover:text-gold-600 dark:hover:text-gold-400 transition-colors" aria-label="Search creations">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            <span class="font-medium">Search creations...</span>
+          </button>
+          <button type="button" class="open-search-btn md:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors" aria-label="Search creations">
+            <i data-lucide="search" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </button>
 
-					<div class="kb-modal__content">
-						<h2 class="kb-modal__title"><?php echo $title; ?></h2>
-						<p class="kb-modal__price"><?php echo $price; ?></p>
-						<div class="kb-modal__desc"><?php echo $modal; ?></div>
+          <!-- Dark/Light Theme Toggle -->
+          <button type="button" class="theme-toggle-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors" aria-label="Toggle dark and light mode">
+            <i data-lucide="sun" class="theme-sun-icon w-4 h-4 sm:w-5 sm:h-5 hidden"></i>
+            <i data-lucide="moon" class="theme-moon-icon w-4 h-4 sm:w-5 sm:h-5"></i>
+          </button>
 
-						<button class="kb-btn kb-btn--lg kb-btn--full" disabled>
-							<?php esc_html_e( 'Add to Cart — Coming Soon', 'kinboni-pro' ); ?>
-						</button>
+          <!-- Patron Account Concierge -->
+          <button type="button" class="open-account-btn hidden sm:flex w-10 h-10 rounded-full items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors" aria-label="Patron Account Concierge">
+            <i data-lucide="user" class="w-5 h-5"></i>
+          </button>
 
-						<p class="kb-modal__note">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-							<?php esc_html_e( '100% Authentic · Free Returns', 'kinboni-pro' ); ?>
-						</p>
-					</div>
-				</div>
-			</div>
-		</div>
+          <!-- Wishlist Button with Badge -->
+          <button type="button" class="open-wishlist-btn relative w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors" aria-label="View Saved Wishlist">
+            <i data-lucide="heart" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            <span class="wishlist-count-badge absolute top-0.5 right-0.5 transform scale-0 transition-transform duration-300 flex items-center justify-center min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 text-[9px] sm:text-[10px] font-bold text-white bg-rose-600 rounded-full shadow-sm">0</span>
+          </button>
+
+          <!-- Shopping Bag Button with Live Item Counter -->
+          <button type="button" class="open-cart-btn relative w-8 h-8 sm:w-auto p-0 sm:pl-3.5 sm:pr-4 sm:py-2 rounded-full bg-stone-900 dark:bg-gold-400 text-white dark:text-stone-950 hover:bg-gold-600 dark:hover:bg-gold-300 transition-all shadow-sm active:scale-95 flex items-center justify-center sm:gap-2 flex-shrink-0" aria-label="Open Shopping Bag">
+            <i data-lucide="shopping-bag" class="cart-badge-icon w-4 h-4 transition-transform duration-200"></i>
+            <span class="hidden sm:inline text-xs font-bold tracking-wide">Bag</span>
+            <span class="cart-count-badge absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 transform scale-0 transition-transform duration-300 flex items-center justify-center min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 text-[10px] sm:text-[11px] font-bold text-stone-950 bg-gold-400 dark:bg-white rounded-full shadow-md">0</span>
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </header>
 
 		<?php
 	}

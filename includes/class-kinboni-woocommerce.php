@@ -25,6 +25,10 @@ class Kinboni_WooCommerce {
 	 * Ensure WooCommerce cart & session are loaded (needed in AJAX context).
 	 */
 	public static function ensure_cart_loaded(): void {
+		if ( ! function_exists( 'WC' ) ) {
+			return;
+		}
+
 		if ( ! did_action( 'woocommerce_init' ) || ! did_action( 'woocommerce_after_register_taxonomy' ) ) {
 			return;
 		}
