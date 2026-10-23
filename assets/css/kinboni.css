@@ -353,4 +353,22 @@ body.kb-modal-open { overflow: hidden; }
   }
 }
 
+/* ═══════════════════════════════════════
+   7. DYNAMIC HEADER & LOGO
+   ═══════════════════════════════════════ */
+.kb-logo-img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.kb-logo-monogram {
+  flex-shrink: 0;
+}
+.kb-nav-link {
+  display: inline-block;
+  cursor: pointer;
+}
+
+
 

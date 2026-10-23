@@ -44,19 +44,9 @@ class Kinboni_Elementor {
 		// Load widget files.
 		$widgets_dir = KINBONI_DIR . 'widgets/';
 
-		// ── Demo Widget ──────────────────────────────────────
-		require_once $widgets_dir . 'class-widget-demo.php';
-		$manager->register( new \KinboniPro\Widgets\Widget_Demo() );
-
-		// ── Future widgets (uncomment as you build) ──────────
-		// require_once $widgets_dir . 'class-widget-product-card.php';
-		// $manager->register( new \KinboniPro\Widgets\Widget_Product_Card() );
-		//
-		// require_once $widgets_dir . 'class-widget-product-grid.php';
-		// $manager->register( new \KinboniPro\Widgets\Widget_Product_Grid() );
-		//
-		// require_once $widgets_dir . 'class-widget-cart-drawer.php';
-		// $manager->register( new \KinboniPro\Widgets\Widget_Cart_Drawer() );
+		// ── Header Widget ────────────────────────────────────
+		require_once $widgets_dir . 'class-widget-header.php';
+		$manager->register( new \KinboniPro\Widgets\Widget_Header() );
 	}
 }
 
