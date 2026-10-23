@@ -44,6 +44,11 @@
 			this._trapFocus( el );
 
 			el.dispatchEvent( new CustomEvent( 'kinboni:modal:open', { bubbles: true } ) );
+
+			// Refresh Lucide icons inside modal if present
+			if ( window.lucide && typeof window.lucide.createIcons === 'function' ) {
+				try { window.lucide.createIcons(); } catch ( err ) {}
+			}
 		},
 
 		/** Close the currently open modal. */
@@ -94,9 +99,9 @@
 
 
 	/* ════════════════════════════════════════════════
-	   Event Binding — runs once on DOMContentLoaded
+	   Event Binding — runs on DOMContentLoaded or immediately if already loaded
 	   ════════════════════════════════════════════════ */
-	document.addEventListener( 'DOMContentLoaded', function () {
+	function initListeners() {
 
 		/* Open modal: any element with data-modal="modal-id" */
 		document.addEventListener( 'click', function ( e ) {
@@ -119,7 +124,17 @@
 			if ( e.key === 'Escape' ) KB.Modal.close();
 		} );
 
-	} );
+		/* Initial Lucide icons refresh */
+		if ( window.lucide && typeof window.lucide.createIcons === 'function' ) {
+			try { window.lucide.createIcons(); } catch ( err ) {}
+		}
+	}
+
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', initListeners );
+	} else {
+		initListeners();
+	}
 
 
 	/* ════════════════════════════════════════════════

@@ -2278,9 +2278,9 @@ const TestimonialSliderController = {
 };
 
 // ==========================================================================
-// 15. INITIALIZATION ON DOM READY
+// 15. INITIALIZATION ON DOM READY OR IMMEDIATE IF ALREADY LOADED
 // ==========================================================================
-document.addEventListener('DOMContentLoaded', () => {
+function bootKinboniApp() {
   ThemeController.init();
   CartController.init();
   WishlistController.init();
@@ -2295,7 +2295,13 @@ document.addEventListener('DOMContentLoaded', () => {
   ProductRenderer.renderBestSellers('all');
 
   refreshIcons();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootKinboniApp);
+} else {
+  bootKinboniApp();
+}
 
 // Export globals for inline event handlers
 window.CartController = CartController;
