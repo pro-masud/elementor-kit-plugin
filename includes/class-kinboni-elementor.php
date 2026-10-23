@@ -47,6 +47,10 @@ class Kinboni_Elementor {
 		// ── Header Widget ────────────────────────────────────
 		require_once $widgets_dir . 'class-widget-header.php';
 		$manager->register( new \KinboniPro\Widgets\Widget_Header() );
+
+		// ── Hero Section Widget ───────────────────────────────
+		require_once $widgets_dir . 'class-widget-hero.php';
+		$manager->register( new \KinboniPro\Widgets\Widget_Hero() );
 	}
 }
 

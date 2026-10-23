@@ -29,8 +29,8 @@ class Kinboni_Ajax {
 	private static function register_endpoints(): void {
 
 		// ── Quick View (product data) ─────────────────────────
-		// add_action( 'wp_ajax_kinboni_quick_view',        [ __CLASS__, 'quick_view' ] );
-		// add_action( 'wp_ajax_nopriv_kinboni_quick_view', [ __CLASS__, 'quick_view' ] );
+		add_action( 'wp_ajax_kinboni_quick_view',        [ __CLASS__, 'quick_view' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_quick_view', [ __CLASS__, 'quick_view' ] );
 
 		// ── Add to Cart ───────────────────────────────────────
 		// add_action( 'wp_ajax_kinboni_add_to_cart',        [ __CLASS__, 'add_to_cart' ] );
@@ -54,24 +54,62 @@ class Kinboni_Ajax {
 		return check_ajax_referer( 'kinboni_nonce', 'nonce', false ) !== false;
 	}
 
-	/*
-	|--------------------------------------------------------------------------
-	| AJAX Endpoint Methods (uncomment & implement as you build)
-	|--------------------------------------------------------------------------
-	|
-	| public static function quick_view(): void {
-	|     if ( ! self::verify_nonce() ) {
-	|         wp_send_json_error( [ 'message' => 'Security check failed.' ], 403 );
-	|     }
-	|     $product_id = absint( $_POST['product_id'] ?? 0 );
-	|     // ... load product, return JSON
-	|     wp_send_json_success( $data );
-	| }
-	|
-	| public static function add_to_cart(): void { ... }
-	| public static function get_cart(): void { ... }
-	| public static function process_checkout(): void { ... }
-	|
-	*/
+	/**
+	 * AJAX endpoint for loading WooCommerce product data for Quick View.
+	 */
+	public static function quick_view(): void {
+		$product_id = absint( $_REQUEST['product_id'] ?? 0 );
+		if ( ! $product_id ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid product ID.', 'kinboni-pro' ) ], 400 );
+		}
+
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce is not active.', 'kinboni-pro' ) ], 400 );
+		}
+
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			wp_send_json_error( [ 'message' => __( 'Product not found.', 'kinboni-pro' ) ], 404 );
+		}
+
+		$image_id = $product->get_image_id();
+		$main_img = $image_id ? wp_get_attachment_image_url( $image_id, 'large' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'large' ) : '' );
+
+		$gallery = [ $main_img ];
+		foreach ( $product->get_gallery_image_ids() as $gid ) {
+			$gurl = wp_get_attachment_image_url( $gid, 'large' );
+			if ( $gurl && ! in_array( $gurl, $gallery, true ) ) {
+				$gallery[] = $gurl;
+			}
+		}
+
+		$cats = wp_get_post_terms( $product->get_id(), 'product_cat' );
+		$cat_name = ! empty( $cats ) && ! is_wp_error( $cats ) ? $cats[0]->name : __( 'Fine Collection', 'kinboni-pro' );
+
+		$currency_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '৳';
+		$raw_price = $product->get_price();
+		$regular_price = $product->get_regular_price();
+
+		$data = [
+			'id'            => $product->get_id(),
+			'name'          => $product->get_name(),
+			'price'         => (float) $raw_price,
+			'formattedPrice'=> $currency_symbol . number_format( (float) $raw_price ),
+			'originalPrice' => $regular_price && (float) $regular_price > (float) $raw_price ? (float) $regular_price : null,
+			'badge'         => $cat_name,
+			'categoryLabel' => $cat_name,
+			'image'         => $gallery[0],
+			'hoverImage'    => count( $gallery ) > 1 ? $gallery[1] : $gallery[0],
+			'gallery'       => $gallery,
+			'description'   => wp_strip_all_tags( $product->get_short_description() ?: $product->get_description() ),
+			'permalink'     => $product->get_permalink(),
+			'rating'        => $product->get_average_rating() ? (float) $product->get_average_rating() : 5.0,
+			'reviewsCount'  => $product->get_review_count() ?: 18,
+			'inStock'       => $product->is_in_stock(),
+			'specs'         => [ 'Authentic Certified Craftsmanship', 'Complimentary Insured Shipping', '7-Day Return Guarantee' ],
+		];
+
+		wp_send_json_success( $data );
+	}
 }
 

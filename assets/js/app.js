@@ -598,15 +598,19 @@ const CartController = {
   },
 
   add(productId, quantity = 1, options = {}) {
-    const product = PRODUCTS.find(p => p.id === productId);
+    let product = PRODUCTS.find(p => p.id === productId || p.id === Number(productId));
+    if (!product && typeof QuickViewController !== 'undefined' && QuickViewController.currentProduct && (QuickViewController.currentProduct.id === productId || QuickViewController.currentProduct.id === Number(productId))) {
+      product = QuickViewController.currentProduct;
+      PRODUCTS.push(product);
+    }
     if (!product) return;
 
-    const existing = STATE.cart.find(item => item.id === productId);
+    const existing = STATE.cart.find(item => item.id === productId || item.id === Number(productId));
     if (existing) {
       existing.quantity += quantity;
     } else {
       STATE.cart.push({
-        id: productId,
+        id: product.id,
         quantity: quantity,
         color: options.color || 'Standard',
         size: options.size || null
@@ -913,15 +917,19 @@ const WishlistController = {
   },
 
   toggle(productId) {
-    const product = PRODUCTS.find(p => p.id === productId);
+    let product = PRODUCTS.find(p => p.id === productId || p.id === Number(productId));
+    if (!product && typeof QuickViewController !== 'undefined' && QuickViewController.currentProduct && (QuickViewController.currentProduct.id === productId || QuickViewController.currentProduct.id === Number(productId))) {
+      product = QuickViewController.currentProduct;
+      PRODUCTS.push(product);
+    }
     if (!product) return;
 
-    const index = STATE.wishlist.indexOf(productId);
+    const index = STATE.wishlist.indexOf(product.id);
     if (index > -1) {
       STATE.wishlist.splice(index, 1);
       showToast(`Removed "${product.name}" from wishlist`, 'info');
     } else {
-      STATE.wishlist.push(productId);
+      STATE.wishlist.push(product.id);
       showToast(`Saved "${product.name}" to wishlist`, 'success');
     }
 
@@ -1036,6 +1044,29 @@ const WishlistController = {
 // ==========================================================================
 // 8. QUICK VIEW MODAL CONTROLLER (With Dynamic Thumbnail Switching)
 // ==========================================================================
+function registerProduct(product) {
+  if (!product || !product.id) return null;
+  const idNum = Number(product.id) || product.id;
+  const idx = PRODUCTS.findIndex(p => p.id === product.id || p.id === idNum);
+  const normalized = Object.assign({}, product, {
+    id: idNum,
+    price: typeof product.price === 'number' ? product.price : parseFloat(product.price_raw || product.price || 0),
+    originalPrice: product.originalPrice ? parseFloat(product.originalPrice) : null,
+    rating: product.rating || 5,
+    reviewsCount: product.reviewsCount || 18,
+    specs: (product.specs && Array.isArray(product.specs)) ? product.specs : ['Authentic Certified Craftsmanship', 'Complimentary Insured Shipping', '7-Day Return Guarantee'],
+    categoryLabel: product.categoryLabel || product.badge || 'Fine Collection',
+    hoverImage: product.hoverImage || product.image,
+  });
+
+  if (idx > -1) {
+    PRODUCTS[idx] = Object.assign({}, PRODUCTS[idx], normalized);
+  } else {
+    PRODUCTS.push(normalized);
+  }
+  return normalized;
+}
+
 const QuickViewController = {
   currentProduct: null,
   quantity: 1,
@@ -1070,10 +1101,90 @@ const QuickViewController = {
     });
   },
 
-  open(productId) {
-    const product = PRODUCTS.find(p => p.id === productId);
-    if (!product) return;
+  /**
+   * Instant 0ms modal opening from a trigger element with data-product or product object.
+   */
+  openProduct(triggerOrData) {
+    let product = null;
 
+    if (triggerOrData && typeof triggerOrData === 'object' && triggerOrData.nodeType) {
+      const json = triggerOrData.getAttribute('data-product') 
+        || triggerOrData.dataset?.product 
+        || triggerOrData.closest('[data-product]')?.getAttribute('data-product');
+      if (json) {
+        try {
+          product = JSON.parse(json);
+        } catch (e) {
+          console.warn('Kinboni: Failed to parse product JSON', e);
+        }
+      }
+    } else if (triggerOrData && typeof triggerOrData === 'object') {
+      product = triggerOrData;
+    }
+
+    if (product) {
+      const normalized = registerProduct(product);
+      this.renderModal(normalized || product);
+      return;
+    }
+  },
+
+  /**
+   * Open Quick View by product ID (checks demo PRODUCTS, then fetches via AJAX).
+   */
+  open(productId) {
+    const product = PRODUCTS.find(p => p.id === productId || p.id === Number(productId));
+    if (product) {
+      this.renderModal(product);
+      return;
+    }
+
+    // Fallback: Fetch from WooCommerce via AJAX
+    this.fetchAndOpen(productId);
+  },
+
+  /**
+   * Fetch WooCommerce product data from server and display modal.
+   */
+  fetchAndOpen(productId) {
+    if (!productId) return;
+    const ajaxUrl = (typeof kinboni_vars !== 'undefined' && kinboni_vars.ajax_url) ? kinboni_vars.ajax_url : '/wp-admin/admin-ajax.php';
+    const nonce = (typeof kinboni_vars !== 'undefined' && kinboni_vars.nonce) ? kinboni_vars.nonce : '';
+
+    if (typeof showToast === 'function') {
+      showToast('Opening product details...', 'info');
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'kinboni_quick_view');
+    formData.append('product_id', productId);
+    if (nonce) formData.append('nonce', nonce);
+
+    fetch(ajaxUrl, {
+      method: 'POST',
+      body: formData,
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          const normalized = registerProduct(res.data);
+          this.renderModal(normalized || res.data);
+        } else {
+          if (typeof showToast === 'function') {
+            showToast(res.data?.message || 'Could not load product details.', 'error');
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Kinboni Quick View error:', err);
+      });
+  },
+
+  /**
+   * Render product data into the Quick View modal markup.
+   */
+  renderModal(product) {
+    if (!product) return;
     this.currentProduct = product;
     this.quantity = 1;
 
@@ -1081,10 +1192,45 @@ const QuickViewController = {
     const content = document.getElementById('quickview-content');
     if (!modal || !content) return;
 
-    const isWishlisted = STATE.wishlist.includes(product.id);
-    const discountPercent = product.originalPrice 
-      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
+    const isWishlisted = typeof STATE !== 'undefined' && STATE.wishlist ? STATE.wishlist.includes(product.id) : false;
+    const priceNum = typeof product.price === 'number' ? product.price : parseFloat(product.price_raw || product.price || 0);
+    const origPriceNum = product.originalPrice ? parseFloat(product.originalPrice) : null;
+    const discountPercent = (origPriceNum && origPriceNum > priceNum)
+      ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) 
       : 0;
+
+    const formattedPrice = product.formattedPrice || (typeof formatCurrency === 'function' ? formatCurrency(priceNum) : (product.price_display || `৳${priceNum.toLocaleString()}`));
+    const formattedOrigPrice = origPriceNum ? (typeof formatCurrency === 'function' ? formatCurrency(origPriceNum) : `৳${origPriceNum.toLocaleString()}`) : '';
+
+    const gallery = (product.gallery && Array.isArray(product.gallery) && product.gallery.length > 0)
+      ? product.gallery
+      : [product.image, product.hoverImage].filter(Boolean);
+
+    const specs = (product.specs && Array.isArray(product.specs) && product.specs.length > 0)
+      ? product.specs
+      : ['Authentic Certified Craftsmanship', 'Complimentary Insured Shipping', '7-Day Return Guarantee'];
+
+    const catLabel = product.categoryLabel || product.badge || 'Fine Collection';
+    const rating = product.rating || 5.0;
+    const reviewsCount = product.reviewsCount || 18;
+    const description = product.description || 'Mastercrafted with the utmost precision and artisanal heritage.';
+
+    let galleryThumbsHtml = '';
+    if (gallery.length > 1) {
+      galleryThumbsHtml = `
+        <div class="flex items-center justify-center gap-3">
+          ${gallery.map((imgUrl, idx) => `
+            <button 
+              type="button" 
+              onclick="QuickViewController.switchImage(${idx}, '${imgUrl}')"
+              class="quickview-thumb-btn w-14 h-14 rounded-xl border-2 ${idx === 0 ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-transparent opacity-60 hover:opacity-100'} overflow-hidden shadow-sm transition-all"
+            >
+              <img src="${imgUrl}" alt="${product.name} angle ${idx + 1}" class="w-full h-full object-cover" />
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
 
     content.innerHTML = `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -1093,37 +1239,21 @@ const QuickViewController = {
           <div class="relative aspect-[4/5] rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 shadow-md">
             <img 
               id="quickview-main-image"
-              src="${product.image}" 
+              src="${gallery[0] || product.image}" 
               alt="${product.name}" 
               class="w-full h-full object-cover object-center transition-all duration-300"
             />
           </div>
-          
-          <div class="flex items-center justify-center gap-3">
-            <button 
-              type="button" 
-              onclick="QuickViewController.switchImage(0, '${product.image}')"
-              class="quickview-thumb-btn w-14 h-14 rounded-xl border-2 border-gold-500 ring-2 ring-gold-500/30 overflow-hidden shadow-sm transition-all"
-            >
-              <img src="${product.image}" alt="${product.name} angle 1" class="w-full h-full object-cover" />
-            </button>
-            <button 
-              type="button" 
-              onclick="QuickViewController.switchImage(1, '${product.hoverImage}')"
-              class="quickview-thumb-btn w-14 h-14 rounded-xl border-2 border-transparent opacity-60 hover:opacity-100 overflow-hidden shadow-sm transition-all"
-            >
-              <img src="${product.hoverImage}" alt="${product.name} angle 2" class="w-full h-full object-cover" />
-            </button>
-          </div>
+          ${galleryThumbsHtml}
         </div>
 
         <!-- Product Specs & Actions -->
         <div class="flex flex-col">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs uppercase tracking-widest font-bold text-gold-600 dark:text-gold-400">
-              ${product.categoryLabel}
+              ${catLabel}
             </span>
-            ${renderStarRating(product.rating, product.reviewsCount)}
+            ${typeof renderStarRating === 'function' ? renderStarRating(rating, reviewsCount) : ''}
           </div>
 
           <h2 class="font-serif text-2xl sm:text-3xl font-medium text-stone-900 dark:text-stone-100 mb-2">
@@ -1132,11 +1262,11 @@ const QuickViewController = {
 
           <div class="flex items-baseline gap-3 mb-4">
             <span class="text-2xl font-bold text-stone-900 dark:text-white">
-              ${formatCurrency(product.price)}
+              ${formattedPrice}
             </span>
-            ${product.originalPrice ? `
+            ${origPriceNum && discountPercent > 0 ? `
               <span class="text-base text-stone-400 dark:text-stone-500 line-through">
-                ${formatCurrency(product.originalPrice)}
+                ${formattedOrigPrice}
               </span>
               <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-600 text-white">
                 Save ${discountPercent}%
@@ -1145,7 +1275,7 @@ const QuickViewController = {
           </div>
 
           <p class="text-sm text-stone-600 dark:text-stone-300 leading-relaxed mb-6 font-light">
-            ${product.description}
+            ${description}
           </p>
 
           <!-- Specifications Bullet Points -->
@@ -1154,7 +1284,7 @@ const QuickViewController = {
               Master Artisan Specifications
             </h4>
             <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-stone-600 dark:text-stone-400">
-              ${product.specs.map(spec => `
+              ${specs.map(spec => `
                 <li class="flex items-center gap-2">
                   <i data-lucide="check" class="w-3.5 h-3.5 text-gold-500 flex-shrink-0"></i>
                   <span>${spec}</span>
@@ -2312,6 +2442,7 @@ if (document.readyState === 'loading') {
 window.CartController = CartController;
 window.WishlistController = WishlistController;
 window.QuickViewController = QuickViewController;
+window.registerProduct = registerProduct;
 window.QuickOrderController = QuickOrderController;
 window.SearchController = SearchController;
 window.ProductRenderer = ProductRenderer;
