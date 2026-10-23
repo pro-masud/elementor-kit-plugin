@@ -36,6 +36,19 @@ class Kinboni_Loader {
 
 		// 6. Dependency admin notices (for administrators).
 		add_action( 'admin_notices', [ __CLASS__, 'dependency_notices' ] );
+
+		// 7. Global Storefront Modals, Drawers & Overlays in footer.
+		add_action( 'wp_footer', [ __CLASS__, 'render_storefront_modals' ], 30 );
+	}
+
+	/**
+	 * Render storefront modals, drawers, and global overlays.
+	 */
+	public static function render_storefront_modals(): void {
+		$template = KINBONI_DIR . 'templates/storefront-modals.php';
+		if ( file_exists( $template ) ) {
+			include $template;
+		}
 	}
 
 	/**

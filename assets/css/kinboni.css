@@ -66,14 +66,20 @@
 .kb-card__image-wrap {
   position:     relative;
   overflow:     hidden;
-  aspect-ratio: 4 / 3;
+  width:        100%;
+  height:       var(--kb-card-image-height, 280px);
+  min-height:   200px;
   background:   var(--kb-surface-2);
+  display:      block;
 }
 .kb-card__image {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform .55s ease;
+  width:        100% !important;
+  height:       100% !important;
+  min-height:   100% !important;
+  max-height:   none !important;
+  object-fit:   cover;
+  display:      block !important;
+  transition:   transform .55s ease;
 }
 .kb-card:hover .kb-card__image { transform: scale(1.05); }
 
@@ -244,14 +250,17 @@
 }
 .kb-modal__media {
   flex: 0 0 45%;
-  min-height: 320px;
+  min-height: 380px;
   background: var(--kb-surface-2);
   overflow:   hidden;
+  position:   relative;
 }
 .kb-modal__media img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 380px;
+  object-fit: cover !important;
+  display: block !important;
 }
 .kb-modal__content {
   flex:           1;
@@ -303,4 +312,45 @@ body.kb-modal-open { overflow: hidden; }
   .kb-modal__content { padding: 24px 20px; }
   .kb-modal__title { font-size: 1.2rem; }
 }
+
+/* ═══════════════════════════════════════
+   6. ELEMENTOR & IMAGE HEIGHT OVERRIDES
+   Defeats ".elementor img { height: auto }" so images never collapse in grids/cards
+   ═══════════════════════════════════════ */
+.elementor #hero img,
+.elementor .kb-hero-gallery img,
+.elementor .grid img,
+#hero .grid img,
+#hero img,
+.kb-hero-gallery img,
+.elementor .kb-card__image,
+.kb-card__image {
+  height: 100% !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  object-fit: cover;
+  display: block !important;
+}
+
+/* Ensure grid mosaic items stay tall and never collapse */
+.kb-hero-gallery,
+#hero .grid-rows-6 {
+  min-height: 380px;
+}
+
+@media (min-width: 640px) {
+  .kb-hero-gallery,
+  #hero .grid-rows-6 {
+    min-height: 480px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kb-hero-gallery,
+  #hero .grid-rows-6 {
+    min-height: 560px;
+  }
+}
+
 

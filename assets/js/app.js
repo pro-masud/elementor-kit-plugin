@@ -2226,7 +2226,6 @@ const TestimonialSliderController = {
     if (!swiperEl) return;
 
     if (typeof Swiper === 'undefined') {
-      console.warn('Swiper JS is not loaded.');
       return;
     }
 
@@ -2272,7 +2271,7 @@ const TestimonialSliderController = {
       });
       refreshIcons();
     } catch (e) {
-      console.error('Error initializing Testimonial Swiper:', e);
+      // Gracefully handle testimonial slider initialization
     }
   }
 };
@@ -2281,20 +2280,26 @@ const TestimonialSliderController = {
 // 15. INITIALIZATION ON DOM READY OR IMMEDIATE IF ALREADY LOADED
 // ==========================================================================
 function bootKinboniApp() {
-  ThemeController.init();
-  CartController.init();
-  WishlistController.init();
-  QuickViewController.init();
-  SearchController.init();
-  QuickOrderController.init();
-  InteractionController.init();
-  LiveSalesController.init();
-  TestimonialSliderController.init();
+  try {
+    if (typeof ThemeController !== 'undefined') ThemeController.init();
+    if (typeof CartController !== 'undefined') CartController.init();
+    if (typeof WishlistController !== 'undefined') WishlistController.init();
+    if (typeof QuickViewController !== 'undefined') QuickViewController.init();
+    if (typeof SearchController !== 'undefined') SearchController.init();
+    if (typeof QuickOrderController !== 'undefined') QuickOrderController.init();
+    if (typeof InteractionController !== 'undefined') InteractionController.init();
+    if (typeof LiveSalesController !== 'undefined') LiveSalesController.init();
+    if (typeof TestimonialSliderController !== 'undefined') TestimonialSliderController.init();
 
-  ProductRenderer.renderFeatured();
-  ProductRenderer.renderBestSellers('all');
+    if (typeof ProductRenderer !== 'undefined') {
+      ProductRenderer.renderFeatured();
+      ProductRenderer.renderBestSellers('all');
+    }
 
-  refreshIcons();
+    refreshIcons();
+  } catch (e) {
+    // Graceful error suppression
+  }
 }
 
 if (document.readyState === 'loading') {

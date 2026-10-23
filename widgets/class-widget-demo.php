@@ -54,12 +54,23 @@ class Widget_Demo extends \Elementor\Widget_Base {
 
 		/* ── Content Tab ─────────────────────────────── */
 		$this->start_controls_section( 'section_content', [
-			'label' => __( 'Card Content', 'kinboni-pro' ),
+			'label' => __( 'Showcase & Content', 'kinboni-pro' ),
 			'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
 		] );
 
+		$this->add_control( 'layout_view', [
+			'label'   => __( 'Showcase Layout', 'kinboni-pro' ),
+			'type'    => \Elementor\Controls_Manager::SELECT,
+			'default' => 'all',
+			'options' => [
+				'all'  => __( 'Hero + Product Demo Card', 'kinboni-pro' ),
+				'hero' => __( 'Hero Section Only', 'kinboni-pro' ),
+				'card' => __( 'Product Demo Card Only', 'kinboni-pro' ),
+			],
+		] );
+
 		$this->add_control( 'image', [
-			'label'   => __( 'Image', 'kinboni-pro' ),
+			'label'   => __( 'Product Card Image', 'kinboni-pro' ),
 			'type'    => \Elementor\Controls_Manager::MEDIA,
 			'default' => [ 'url' => \Elementor\Utils::get_placeholder_image_src() ],
 		] );
@@ -143,6 +154,76 @@ class Widget_Demo extends \Elementor\Widget_Base {
 		] );
 
 		$this->end_controls_section();
+
+		/* ── Image & Gallery Sizing ──────────────────── */
+		$this->start_controls_section( 'section_image_style', [
+			'label' => __( 'Image & Gallery Sizing', 'kinboni-pro' ),
+			'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
+		] );
+
+		// Card Image Height (Responsive: Desktop, Tablet, Mobile)
+		$this->add_responsive_control( 'image_height', [
+			'label'      => __( 'Card Image Height', 'kinboni-pro' ),
+			'type'       => \Elementor\Controls_Manager::SLIDER,
+			'size_units' => [ 'px', 'vh', 'rem' ],
+			'range'      => [
+				'px'  => [ 'min' => 150, 'max' => 800, 'step' => 5 ],
+				'vh'  => [ 'min' => 15,  'max' => 90,  'step' => 1 ],
+				'rem' => [ 'min' => 10,  'max' => 50,  'step' => 1 ],
+			],
+			'default'    => [ 'unit' => 'px', 'size' => 320 ],
+			'selectors'  => [
+				'{{WRAPPER}} .kb-card__image-wrap' => 'height: {{SIZE}}{{UNIT}} !important; min-height: {{SIZE}}{{UNIT}} !important;',
+				'{{WRAPPER}} .kb-card__image'      => 'height: 100% !important; min-height: {{SIZE}}{{UNIT}} !important;',
+			],
+		] );
+
+		// Hero Mosaic Gallery Height (Responsive: Desktop, Tablet, Mobile)
+		$this->add_responsive_control( 'hero_gallery_height', [
+			'label'      => __( 'Hero Mosaic Gallery Height', 'kinboni-pro' ),
+			'type'       => \Elementor\Controls_Manager::SLIDER,
+			'size_units' => [ 'px', 'vh' ],
+			'range'      => [
+				'px' => [ 'min' => 250, 'max' => 900, 'step' => 10 ],
+				'vh' => [ 'min' => 25,  'max' => 95,  'step' => 1 ],
+			],
+			'desktop_default' => [ 'unit' => 'px', 'size' => 560 ],
+			'tablet_default'  => [ 'unit' => 'px', 'size' => 480 ],
+			'mobile_default'  => [ 'unit' => 'px', 'size' => 380 ],
+			'selectors'       => [
+				'{{WRAPPER}} .kb-hero-gallery' => 'height: {{SIZE}}{{UNIT}} !important; min-height: {{SIZE}}{{UNIT}} !important;',
+			],
+		] );
+
+		// Object Fit Control
+		$this->add_control( 'image_fit', [
+			'label'     => __( 'Image Object Fit', 'kinboni-pro' ),
+			'type'      => \Elementor\Controls_Manager::SELECT,
+			'default'   => 'cover',
+			'options'   => [
+				'cover'      => __( 'Cover (Preserve aspect, fill container)', 'kinboni-pro' ),
+				'contain'    => __( 'Contain (Show entire image)', 'kinboni-pro' ),
+				'fill'       => __( 'Fill (Stretch to fit)', 'kinboni-pro' ),
+				'scale-down' => __( 'Scale Down', 'kinboni-pro' ),
+			],
+			'selectors' => [
+				'{{WRAPPER}} .kb-card__image'      => 'object-fit: {{VALUE}} !important;',
+				'{{WRAPPER}} .kb-hero-gallery img' => 'object-fit: {{VALUE}} !important;',
+			],
+		] );
+
+		// Image Border Radius Control
+		$this->add_responsive_control( 'image_border_radius', [
+			'label'      => __( 'Card Image Border Radius', 'kinboni-pro' ),
+			'type'       => \Elementor\Controls_Manager::DIMENSIONS,
+			'size_units' => [ 'px', '%', 'rem' ],
+			'selectors'  => [
+				'{{WRAPPER}} .kb-card__image-wrap' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+				'{{WRAPPER}} .kb-card__image'      => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}} !important;',
+			],
+		] );
+
+		$this->end_controls_section();
 	}
 
 	/* ─── Render ─────────────────────────────────────────────── */
@@ -151,7 +232,7 @@ class Widget_Demo extends \Elementor\Widget_Base {
 		$s = $this->get_settings_for_display();
 
 		$uid          = 'kb-modal-' . $this->get_id();
-		$img          = ! empty( $s['image']['url'] ) ? esc_url( $s['image']['url'] ) : '';
+		$img          = ! empty( $s['image']['url'] ) ? esc_url( $s['image']['url'] ) : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80';
 		$title        = esc_html( $s['title'] );
 		$desc         = nl2br( esc_html( $s['description'] ) );
 		$price        = esc_html( $s['price'] );
@@ -161,6 +242,9 @@ class Widget_Demo extends \Elementor\Widget_Base {
 		$accent_color = ! empty( $s['accent_color'] ) ? sanitize_hex_color( $s['accent_color'] ) : '#C5A028';
 		$card_bg      = ! empty( $s['card_bg'] ) ? sanitize_hex_color( $s['card_bg'] ) : '#ffffff';
 		$title_color  = ! empty( $s['title_color'] ) ? sanitize_hex_color( $s['title_color'] ) : '#1a1a1a';
+		$layout_view  = ! empty( $s['layout_view'] ) ? $s['layout_view'] : 'all';
+		$show_hero    = in_array( $layout_view, [ 'all', 'hero' ], true );
+		$show_card    = in_array( $layout_view, [ 'all', 'card' ], true );
 
 		$modal_styles = sprintf(
 			'--kb-gold: %s; --kb-surface: %s; --kb-text: %s;',
@@ -170,6 +254,7 @@ class Widget_Demo extends \Elementor\Widget_Base {
 		);
 		?>
 
+		<?php if ( $show_hero ) : ?>
 		<header id="site-header" class="sticky top-0 z-40 w-full transition-all duration-300 bg-[#FAF8F5]/90 dark:bg-[#0E0E10]/90 backdrop-blur-md border-b border-stone-200/70 dark:border-stone-800/70">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex items-center justify-between h-[72px] gap-4 sm:gap-6">
@@ -288,14 +373,15 @@ class Widget_Demo extends \Elementor\Widget_Base {
 
 				<!-- Right Column: Editorial Mosaic Gallery with 3 Featured Products -->
 				<div class="lg:col-span-6">
-				<div class="grid grid-cols-12 grid-rows-6 gap-3 sm:gap-4 h-[380px] sm:h-[480px] lg:h-[560px] max-w-xl mx-auto">
+				<div class="kb-hero-gallery grid grid-cols-12 grid-rows-6 gap-3 sm:gap-4 h-[380px] sm:h-[480px] lg:h-[560px] max-w-xl mx-auto">
 					
 					<!-- Featured Product 1: Main Arched Editorial Image (Silk & Cashmere) -->
-					<div class="col-span-7 row-span-6 rounded-t-[999px] rounded-b-2xl overflow-hidden bg-stone-200 dark:bg-stone-900 shadow-xl border border-stone-200/60 dark:border-stone-800 group relative">
+					<div class="col-span-7 row-span-6 rounded-t-[999px] rounded-b-2xl overflow-hidden bg-stone-200 dark:bg-stone-900 shadow-xl border border-stone-200/60 dark:border-stone-800 group relative" style="height:100% !important;">
 					<img 
 						src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=85" 
 						alt="Kyoto Mulberry Silk Foulard editorial" 
 						class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+						style="height:100% !important; width:100% !important; object-fit:cover !important;"
 					/>
 					<div class="absolute inset-0 bg-gradient-to-t from-stone-950/60 via-transparent to-transparent pointer-events-none"></div>
 					
@@ -317,11 +403,12 @@ class Widget_Demo extends \Elementor\Widget_Base {
 					</div>
 
 					<!-- Featured Product 2: Top Right (Chronos Royale Watch) -->
-					<div class="col-span-5 row-span-3 rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-stone-900 shadow-md border border-stone-200/60 dark:border-stone-800 group">
+					<div class="col-span-5 row-span-3 rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-stone-900 shadow-md border border-stone-200/60 dark:border-stone-800 group" style="height:100% !important;">
 					<img 
 						src="https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=600&q=85" 
 						alt="Chronos Royale Automatic detail" 
 						class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+						style="height:100% !important; width:100% !important; object-fit:cover !important;"
 					/>
 					<div class="absolute inset-0 bg-gradient-to-t from-stone-950/50 via-transparent to-transparent pointer-events-none"></div>
 
@@ -343,11 +430,12 @@ class Widget_Demo extends \Elementor\Widget_Base {
 					</div>
 
 					<!-- Featured Product 3: Bottom Right (Saddle Leather Briefcase) -->
-					<div class="col-span-5 row-span-3 rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-stone-900 shadow-md border border-stone-200/60 dark:border-stone-800 group">
+					<div class="col-span-5 row-span-3 rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-stone-900 shadow-md border border-stone-200/60 dark:border-stone-800 group" style="height:100% !important;">
 					<img 
 						src="https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=600&q=85" 
 						alt="Atelier Saddle Leather Briefcase detail" 
 						class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+						style="height:100% !important; width:100% !important; object-fit:cover !important;"
 					/>
 					<div class="absolute inset-0 bg-gradient-to-t from-stone-950/50 via-transparent to-transparent pointer-events-none"></div>
 
@@ -396,6 +484,77 @@ class Widget_Demo extends \Elementor\Widget_Base {
 			</ul>
 			</div>
 		</section>
+		<?php endif; ?>
+
+		<?php if ( $show_card ) : ?>
+		<!-- Dedicated Elementor Demo Card & Modal Showcase -->
+		<section class="kb-product-showcase py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+			<div class="text-center mb-8">
+				<p class="text-xs font-bold uppercase tracking-[0.25em] text-gold-600 dark:text-gold-400 mb-2"><?php esc_html_e( 'Interactive Product Widget', 'kinboni-pro' ); ?></p>
+				<h2 class="font-serif text-2xl sm:text-3xl font-medium text-stone-900 dark:text-white"><?php esc_html_e( 'Curated Creation Showcase', 'kinboni-pro' ); ?></h2>
+			</div>
+
+			<div class="flex justify-center">
+				<div class="kb-card w-full max-w-sm" style="--kb-surface: <?php echo esc_attr( $card_bg ); ?>; --kb-text: <?php echo esc_attr( $title_color ); ?>; --kb-gold: <?php echo esc_attr( $accent_color ); ?>;">
+					<div class="kb-card__image-wrap">
+						<img 
+							src="<?php echo esc_url( $img ); ?>" 
+							alt="<?php echo esc_attr( $title ); ?>" 
+							class="kb-card__image" 
+							loading="lazy" 
+						/>
+						<?php if ( ! empty( $badge ) ) : ?>
+							<span class="kb-card__badge"><?php echo esc_html( $badge ); ?></span>
+						<?php endif; ?>
+					</div>
+					<div class="kb-card__body">
+						<h3 class="kb-card__title"><?php echo esc_html( $title ); ?></h3>
+						<?php if ( ! empty( $desc ) ) : ?>
+							<p class="kb-card__desc"><?php echo esc_html( $desc ); ?></p>
+						<?php endif; ?>
+						<div class="kb-card__footer">
+							<span class="kb-card__price"><?php echo esc_html( $price ); ?></span>
+							<button type="button" class="kb-btn" data-modal="<?php echo esc_attr( $uid ); ?>">
+								<i data-lucide="eye" class="w-4 h-4"></i>
+								<span><?php echo esc_html( $btn ); ?></span>
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Accessible Quick View Modal Dialog -->
+			<div id="<?php echo esc_attr( $uid ); ?>" class="kb-modal" role="dialog" aria-modal="true" aria-labelledby="<?php echo esc_attr( $uid ); ?>-title" style="<?php echo esc_attr( $modal_styles ); ?>">
+				<div class="kb-modal__backdrop" data-close-modal></div>
+				<div class="kb-modal__box">
+					<button type="button" class="kb-modal__close" data-close-modal aria-label="<?php esc_attr_e( 'Close dialog', 'kinboni-pro' ); ?>">
+						<i data-lucide="x" class="w-5 h-5"></i>
+					</button>
+					<div class="kb-modal__inner">
+						<div class="kb-modal__media">
+							<img src="<?php echo esc_url( $img ); ?>" alt="<?php echo esc_attr( $title ); ?>" loading="lazy" />
+						</div>
+						<div class="kb-modal__content">
+							<?php if ( ! empty( $badge ) ) : ?>
+								<span class="inline-block text-xs font-bold uppercase tracking-wider text-gold-600 dark:text-gold-400"><?php echo esc_html( $badge ); ?></span>
+							<?php endif; ?>
+							<h3 id="<?php echo esc_attr( $uid ); ?>-title" class="kb-modal__title"><?php echo esc_html( $title ); ?></h3>
+							<p class="kb-modal__price"><?php echo esc_html( $price ); ?></p>
+							<div class="kb-modal__desc">
+								<?php echo $modal; ?>
+							</div>
+							<div class="pt-4 mt-auto border-t border-stone-200 dark:border-stone-800 flex items-center gap-3">
+								<button type="button" class="kb-btn kb-btn--lg kb-btn--full" onclick="showToast('<?php echo esc_js( sprintf( __( 'Added %s to bag', 'kinboni-pro' ), $title ) ); ?>', 'success')">
+									<i data-lucide="shopping-bag" class="w-4 h-4"></i>
+									<span><?php esc_html_e( 'Add to Bag', 'kinboni-pro' ); ?></span>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<?php endif; ?>
 
 		<?php
 	}

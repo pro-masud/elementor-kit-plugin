@@ -34,28 +34,36 @@ class Kinboni_Assets {
 		add_action( 'elementor/preview/enqueue_styles', [ __CLASS__, 'enqueue_styles' ] );
 		add_action( 'elementor/preview/enqueue_scripts', [ __CLASS__, 'enqueue_scripts' ] );
 
-		// Enqueue in Elementor editor panel.
+		// Enqueue in Elementor editor panel (UI styles and icons only, avoid frontend storefront conflicts).
 		add_action( 'elementor/editor/after_enqueue_styles', [ __CLASS__, 'enqueue_styles' ] );
-		add_action( 'elementor/editor/after_enqueue_scripts', [ __CLASS__, 'enqueue_scripts' ] );
+		add_action( 'elementor/editor/after_enqueue_scripts', [ __CLASS__, 'enqueue_editor_scripts' ] );
 	}
 
 	/**
 	 * Register all script handles so Elementor and WordPress know them.
 	 */
 	public static function register_scripts(): void {
-		// Lucide Icons CDN.
+		// Lucide Icons (prefer local vendor copy to avoid CDN latency & tracking prevention).
+		$lucide_src = file_exists( KINBONI_DIR . 'assets/vendor/lucide.min.js' )
+			? KINBONI_URL . 'assets/vendor/lucide.min.js'
+			: 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js';
+
 		wp_register_script(
 			'lucide-icons',
-			'https://unpkg.com/lucide@latest',
+			$lucide_src,
 			[],
 			KINBONI_VERSION,
 			true
 		);
 
-		// Swiper Slider JS CDN.
+		// Swiper Slider JS (prefer local vendor copy).
+		$swiper_js_src = file_exists( KINBONI_DIR . 'assets/vendor/swiper-bundle.min.js' )
+			? KINBONI_URL . 'assets/vendor/swiper-bundle.min.js'
+			: 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js';
+
 		wp_register_script(
 			'swiper-bundle',
-			'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js',
+			$swiper_js_src,
 			[],
 			'11.0.0',
 			true
@@ -97,10 +105,14 @@ class Kinboni_Assets {
 			null
 		);
 
-		// Swiper Slider CSS.
+		// Swiper Slider CSS (prefer local vendor copy).
+		$swiper_css_src = file_exists( KINBONI_DIR . 'assets/vendor/swiper-bundle.min.css' )
+			? KINBONI_URL . 'assets/vendor/swiper-bundle.min.css'
+			: 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css';
+
 		wp_register_style(
 			'swiper-bundle',
-			'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css',
+			$swiper_css_src,
 			[],
 			'11.0.0'
 		);
@@ -144,6 +156,16 @@ class Kinboni_Assets {
 		wp_enqueue_script( 'swiper-bundle' );
 		wp_enqueue_script( 'kinboni-pro' );
 		wp_enqueue_script( 'kinboni-app' );
+	}
+
+	/**
+	 * Scripts for Elementor editor panel (UI styles and icons only).
+	 */
+	public static function enqueue_editor_scripts(): void {
+		self::register_scripts();
+
+		wp_enqueue_script( 'lucide-icons' );
+		wp_enqueue_script( 'kinboni-pro' );
 	}
 
 	/**
