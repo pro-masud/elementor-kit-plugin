@@ -1,0 +1,293 @@
+/*
+ * KINBONI Pro — Storefront Styles
+ * Version: 2.0.0
+ *
+ * Structure:
+ *  1. CSS Variables (Design tokens)
+ *  2. Card Component
+ *  3. Button Component
+ *  4. Modal Component
+ *  5. Utilities & Animations
+ */
+
+/* ═══════════════════════════════════════
+   1. DESIGN TOKENS
+   ═══════════════════════════════════════ */
+:root {
+  --kb-gold:        #C5A028;
+  --kb-gold-hover:  #a8871e;
+  --kb-dark:        #0E0E10;
+  --kb-surface:     #ffffff;
+  --kb-surface-2:   #f7f5f2;
+  --kb-text:        #1a1a1a;
+  --kb-text-muted:  #6b7280;
+  --kb-border:      #e5e0d8;
+  --kb-shadow:      0 4px 24px rgba(0,0,0,.08);
+  --kb-shadow-lg:   0 20px 60px rgba(0,0,0,.16);
+  --kb-radius:      14px;
+  --kb-radius-sm:   8px;
+  --kb-ease:        cubic-bezier(.4,0,.2,1);
+  --kb-speed:       .28s;
+  --kb-modal-z:     99999;
+  --kb-font-serif:  'Georgia', 'Times New Roman', serif;
+  --kb-font-sans:   -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ═══════════════════════════════════════
+   2. CARD
+   ═══════════════════════════════════════ */
+.kb-card {
+  background:    var(--kb-surface);
+  border:        1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  overflow:      hidden;
+  box-shadow:    var(--kb-shadow);
+  transition:    box-shadow var(--kb-speed) var(--kb-ease),
+                 transform var(--kb-speed) var(--kb-ease);
+  font-family:   var(--kb-font-sans);
+}
+.kb-card:hover {
+  box-shadow: var(--kb-shadow-lg);
+  transform:  translateY(-4px);
+}
+
+/* Image */
+.kb-card__image-wrap {
+  position:     relative;
+  overflow:     hidden;
+  aspect-ratio: 4 / 3;
+  background:   var(--kb-surface-2);
+}
+.kb-card__image {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .55s ease;
+}
+.kb-card:hover .kb-card__image { transform: scale(1.05); }
+
+/* Badge */
+.kb-card__badge {
+  position:       absolute;
+  top: 12px; left: 12px;
+  padding:        4px 11px;
+  border-radius:  999px;
+  font-size:      11px;
+  font-weight:    700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color:          #000;
+  background:     var(--kb-gold);
+}
+
+/* Body */
+.kb-card__body { padding: 20px 22px; }
+
+.kb-card__title {
+  font-family:  var(--kb-font-serif);
+  font-size:    1.15rem;
+  font-weight:  700;
+  color:        var(--kb-text);
+  margin:       0 0 8px;
+  line-height:  1.3;
+}
+.kb-card__desc {
+  font-size:   .85rem;
+  color:       var(--kb-text-muted);
+  margin:      0 0 16px;
+  line-height: 1.6;
+}
+.kb-card__footer {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kb-card__price {
+  font-family: var(--kb-font-serif);
+  font-size:   1.2rem;
+  font-weight: 700;
+  color:       var(--kb-gold);
+}
+
+/* ═══════════════════════════════════════
+   3. BUTTON
+   ═══════════════════════════════════════ */
+.kb-btn {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             8px;
+  padding:         10px 22px;
+  border:          none;
+  border-radius:   var(--kb-radius-sm);
+  background:      var(--kb-gold);
+  color:           #000;
+  font-family:     var(--kb-font-sans);
+  font-size:       .8rem;
+  font-weight:     700;
+  letter-spacing:  .07em;
+  text-transform:  uppercase;
+  cursor:          pointer;
+  white-space:     nowrap;
+  transition:      background var(--kb-speed) var(--kb-ease),
+                   transform  var(--kb-speed) var(--kb-ease);
+}
+.kb-btn:hover {
+  background: var(--kb-gold-hover);
+  transform:  translateY(-1px);
+}
+.kb-btn:active        { transform: translateY(0); }
+.kb-btn--lg           { padding: 14px 28px; font-size: .85rem; }
+.kb-btn--full          { width: 100%; }
+.kb-btn[disabled]     { opacity: .4; cursor: not-allowed; pointer-events: none; }
+.kb-btn:focus-visible { outline: 2px solid var(--kb-gold); outline-offset: 2px; }
+
+/* ═══════════════════════════════════════
+   4. MODAL
+   ═══════════════════════════════════════ */
+
+/* Container — hidden by default */
+.kb-modal {
+  position:        fixed;
+  inset:           0;
+  z-index:         var(--kb-modal-z);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         16px;
+  visibility:      hidden;
+  pointer-events:  none;
+}
+.kb-modal.is-open {
+  visibility:      visible;
+  pointer-events:  auto;
+}
+
+/* Backdrop */
+.kb-modal__backdrop {
+  position:   absolute;
+  inset:      0;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity:    0;
+  transition: opacity var(--kb-speed) var(--kb-ease);
+  cursor:     pointer;
+}
+.kb-modal.is-open .kb-modal__backdrop { opacity: 1; }
+
+/* Box */
+.kb-modal__box {
+  position:      relative;
+  background:    var(--kb-surface);
+  border-radius: var(--kb-radius);
+  box-shadow:    var(--kb-shadow-lg);
+  width:         100%;
+  max-width:     860px;
+  max-height:    90vh;
+  overflow:      hidden;
+  z-index:       1;
+  transform:     translateY(30px) scale(.96);
+  opacity:       0;
+  transition:    transform var(--kb-speed) var(--kb-ease),
+                 opacity   var(--kb-speed) var(--kb-ease);
+}
+.kb-modal.is-open .kb-modal__box {
+  transform: translateY(0) scale(1);
+  opacity:   1;
+}
+
+/* Close */
+.kb-modal__close {
+  position:        absolute;
+  top: 14px; right: 14px; z-index: 2;
+  width: 38px; height: 38px;
+  border:          1px solid var(--kb-border);
+  border-radius:   50%;
+  background:      var(--kb-surface);
+  color:           var(--kb-text-muted);
+  cursor:          pointer;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  transition:      background var(--kb-speed), color var(--kb-speed);
+}
+.kb-modal__close:hover {
+  background: var(--kb-dark);
+  color:      #fff;
+}
+.kb-modal__close:focus-visible {
+  outline: 2px solid var(--kb-gold);
+  outline-offset: 2px;
+}
+
+/* Inner — 2 columns desktop */
+.kb-modal__inner {
+  display:    flex;
+  flex-wrap:  wrap;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+.kb-modal__media {
+  flex: 0 0 45%;
+  min-height: 320px;
+  background: var(--kb-surface-2);
+  overflow:   hidden;
+}
+.kb-modal__media img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.kb-modal__content {
+  flex:           1;
+  padding:        36px 32px;
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+  overflow-y:     auto;
+}
+
+.kb-modal__title {
+  font-family: var(--kb-font-serif);
+  font-size:   1.5rem;
+  font-weight: 700;
+  color:       var(--kb-text);
+  margin:      0;
+  line-height: 1.25;
+}
+.kb-modal__price {
+  font-family: var(--kb-font-serif);
+  font-size:   1.35rem;
+  font-weight: 700;
+  color:       var(--kb-gold);
+  margin:      0;
+}
+.kb-modal__desc {
+  font-size:   .9rem;
+  color:       var(--kb-text-muted);
+  line-height: 1.7;
+}
+.kb-modal__desc p { margin: 0; }
+.kb-modal__note {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  font-size:   .78rem;
+  color:       var(--kb-text-muted);
+  margin:      0;
+}
+
+/* ═══════════════════════════════════════
+   5. UTILITIES
+   ═══════════════════════════════════════ */
+body.kb-modal-open { overflow: hidden; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .kb-modal__media { flex: 0 0 100%; min-height: 200px; }
+  .kb-modal__content { padding: 24px 20px; }
+  .kb-modal__title { font-size: 1.2rem; }
+}
+
