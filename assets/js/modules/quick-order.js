@@ -2,9 +2,10 @@
  * KINBONI Pro - Fast 3-Field Express COD Checkout Controller (Module 01)
  *
  * Integrates directly with native WooCommerce via AJAX:
+ *  - Direct 1-Click Order Now without cart clutter or premature bag notifications
  *  - Delivery zone calculations (Inside Dhaka ৳60 / Outside Dhaka ৳120 / Complimentary >= ৳2500)
  *  - Real-time client-side field validation (Name, Bangladeshi phone, Address)
- *  - Order generation via 'kinboni_create_cod_order' with nonce & stock deduction
+ *  - Order generation via 'kinboni_create_cod_order' with nonce, stock deduction & double-submit protection
  *  - Order confirmation screen with authoritative WooCommerce Order ID & WhatsApp link
  *
  * @package KinboniPro
@@ -37,45 +38,63 @@
 
   const QuickOrderController = {
     currentDeliveryFee: 60,
+    isInitialized: false,
+    isSubmitting: false,
+    checkoutMode: 'cart', // 'cart' or 'direct'
+    directItem: null,
+
+    /**
+     * Get active items for checkout (either current cart items or direct 1-click item).
+     */
+    getActiveItems() {
+      if (this.checkoutMode === 'direct' && this.directItem) {
+        return [this.directItem];
+      }
+      return Array.isArray(window.STATE?.cart) ? window.STATE.cart : [];
+    },
 
     /**
      * Initialize DOM event listeners for COD Checkout Modal.
+     * Guarded with idempotency flag to prevent duplicate listeners.
      */
     init() {
+      if (this.isInitialized) return;
+      this.isInitialized = true;
+
       const modal = document.getElementById('checkout-modal');
       const backdrop = document.getElementById('checkout-backdrop');
       const closeBtn = document.getElementById('close-checkout-modal-btn');
       const closeSuccessBtn = document.getElementById('close-success-view-btn');
       const form = document.getElementById('quick-order-form');
 
-      if (backdrop) backdrop.addEventListener('click', () => this.close());
-      if (closeBtn) closeBtn.addEventListener('click', () => this.close());
-      if (closeSuccessBtn) closeSuccessBtn.addEventListener('click', () => this.close());
+      if (backdrop) backdrop.onclick = () => this.close();
+      if (closeBtn) closeBtn.onclick = () => this.close();
+      if (closeSuccessBtn) closeSuccessBtn.onclick = () => this.close();
 
       // Delivery zone radio buttons
       const zoneRadios = document.querySelectorAll('input[name="order-delivery-zone"]');
       zoneRadios.forEach((radio) => {
-        radio.addEventListener('change', (e) => {
+        radio.onchange = (e) => {
           this.updateDeliveryFee(e.target.value);
-        });
+        };
       });
 
       // Name real-time validation
       const nameInput = document.getElementById('order-customer-name');
       if (nameInput) {
-        nameInput.addEventListener('input', (e) => {
+        nameInput.oninput = (e) => {
           if (e.target.value.trim().length >= 2) {
             nameInput.classList.remove('border-rose-500');
             const err = document.getElementById('order-name-error');
             if (err) err.classList.add('hidden');
           }
-        });
+        };
       }
 
       // Phone real-time validation & digit sanitization
       const phoneInput = document.getElementById('order-customer-phone');
       if (phoneInput) {
-        phoneInput.addEventListener('input', (e) => {
+        phoneInput.oninput = (e) => {
           const cleaned = e.target.value.replace(/[^\d+]/g, '');
           e.target.value = cleaned;
           if (cleaned.length >= 11) {
@@ -83,50 +102,75 @@
             const err = document.getElementById('order-phone-error');
             if (err) err.classList.add('hidden');
           }
-        });
+        };
       }
 
       // Address real-time validation
       const addressInput = document.getElementById('order-customer-address');
       if (addressInput) {
-        addressInput.addEventListener('input', (e) => {
+        addressInput.oninput = (e) => {
           if (e.target.value.trim().length >= 5) {
             addressInput.classList.remove('border-rose-500');
             const err = document.getElementById('order-address-error');
             if (err) err.classList.add('hidden');
           }
-        });
+        };
       }
 
+      // Form submission: use onsubmit property to guarantee exactly ONE handler
       if (form) {
-        form.addEventListener('submit', (e) => {
+        form.onsubmit = (e) => {
           e.preventDefault();
           this.handleSubmit();
-        });
+        };
       }
 
-      // Escape key listener
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
-          this.close();
-        }
-      });
+      // Escape key listener (only attached once)
+      if (!this._hasEscListener) {
+        this._hasEscListener = true;
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            this.close();
+          }
+        });
+      }
     },
 
     /**
-     * Open COD express checkout modal.
+     * Direct 1-Click Order Now for a specific product.
+     * Bypasses the shopping bag completely with zero cart clutter.
+     */
+    orderDirect(productId, quantity = 1, options = {}) {
+      if (!productId) return;
+      const pidNum = Number(productId) || productId;
+      const products = Array.isArray(window.PRODUCTS) ? window.PRODUCTS : [];
+      const product = products.find((p) => p.id == pidNum || p.id == productId);
+
+      this.checkoutMode = 'direct';
+      this.directItem = {
+        id: pidNum,
+        name: product ? product.name : (options.title || 'Bespoke Creation'),
+        price: product ? product.price : (options.price || 0),
+        image: product ? product.image : (options.image || ''),
+        category: product ? (product.categoryLabel || product.category || 'Atelier') : 'Atelier',
+        quantity: Math.max(1, Number(quantity) || 1),
+        color: options.color || 'Standard',
+        size: options.size || '',
+      };
+
+      this.openModal();
+    },
+
+    /**
+     * Open COD express checkout modal for current bag or specific product.
      */
     open(productId) {
-      const state = window.STATE || {};
-      const cart = Array.isArray(state.cart) ? state.cart : [];
-
-      // If productId is provided and cart is empty or doesn't have it, optionally add it
-      if (productId && typeof window.CartController !== 'undefined' && typeof window.CartController.add === 'function') {
-        const hasItem = cart.some(item => item.id == productId);
-        if (!hasItem) {
-          window.CartController.add(productId, 1);
-        }
+      if (productId) {
+        return this.orderDirect(productId, 1);
       }
+
+      this.checkoutMode = 'cart';
+      this.directItem = null;
 
       const activeCart = Array.isArray(window.STATE?.cart) ? window.STATE.cart : [];
       if (activeCart.length === 0) {
@@ -134,6 +178,13 @@
         return;
       }
 
+      this.openModal();
+    },
+
+    /**
+     * Display and hydrate the modal views.
+     */
+    openModal() {
       if (window.CartController && typeof window.CartController.close === 'function') {
         window.CartController.close();
       }
@@ -160,6 +211,12 @@
       modal.classList.remove('hidden');
       document.body.classList.add('overflow-hidden');
       safeRefreshIcons();
+
+      // Focus name input for friction-free UX
+      const nameInput = document.getElementById('order-customer-name');
+      if (nameInput) {
+        setTimeout(() => nameInput.focus(), 150);
+      }
     },
 
     /**
@@ -174,22 +231,23 @@
     },
 
     /**
-     * Render cart items in the checkout modal summary preview.
+     * Render items in the checkout modal summary preview.
      */
     renderItemsPreview() {
       const container = document.getElementById('checkout-items-preview');
       if (!container) return;
 
-      const cart = Array.isArray(window.STATE?.cart) ? window.STATE.cart : [];
+      const items = this.getActiveItems();
       const products = Array.isArray(window.PRODUCTS) ? window.PRODUCTS : [];
 
-      const itemsHtml = cart
+      const itemsHtml = items
         .map((item) => {
           const product = products.find((p) => p.id == item.id) || null;
-          const name = product ? product.name : (item.name || 'Bespoke Creation');
-          const price = product ? product.price : (item.price || 0);
-          const image = product ? product.image : (item.image || '');
-          const cat = product ? (product.categoryLabel || product.category || 'Atelier') : 'Atelier';
+          const name = item.name || (product ? product.name : 'Bespoke Creation');
+          const price = typeof item.price === 'number' ? item.price : (product ? product.price : 0);
+          const image = item.image || (product ? product.image : '');
+          const cat = item.category || (product ? (product.categoryLabel || product.category || 'Atelier') : 'Atelier');
+          const qty = item.quantity || 1;
 
           return `
           <div class="flex items-center gap-3.5 p-3 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 shadow-2xs hover:border-gold-500/30 transition-colors">
@@ -207,10 +265,10 @@
               </h5>
               <div class="flex items-center justify-between mt-1.5 text-xs">
                 <span class="text-stone-500 dark:text-stone-400 text-[11px]">
-                  Qty: <strong class="text-stone-900 dark:text-stone-200">${item.quantity}</strong> × ${safeFormatCurrency(price)}
+                  Qty: <strong class="text-stone-900 dark:text-stone-200">${qty}</strong> × ${safeFormatCurrency(price)}
                 </span>
                 <span class="font-serif font-bold text-stone-900 dark:text-white">
-                  ${safeFormatCurrency(price * item.quantity)}
+                  ${safeFormatCurrency(price * qty)}
                 </span>
               </div>
             </div>
@@ -226,14 +284,14 @@
      * Compute delivery fee based on zone and threshold.
      */
     updateDeliveryFee(zone) {
-      const cart = Array.isArray(window.STATE?.cart) ? window.STATE.cart : [];
+      const items = this.getActiveItems();
       const products = Array.isArray(window.PRODUCTS) ? window.PRODUCTS : [];
       const threshold = window.FREE_SHIPPING_THRESHOLD || 2500;
 
-      const subtotal = cart.reduce((sum, item) => {
+      const subtotal = items.reduce((sum, item) => {
         const p = products.find((prod) => prod.id == item.id);
-        const price = p ? p.price : (item.price || 0);
-        return sum + (price * item.quantity);
+        const price = typeof item.price === 'number' ? item.price : (p ? p.price : 0);
+        return sum + (price * (item.quantity || 1));
       }, 0);
 
       const isFree = subtotal >= threshold;
@@ -277,15 +335,15 @@
       const zoneFeeInside = document.getElementById('zone-fee-inside');
       const zoneFeeOutside = document.getElementById('zone-fee-outside');
 
-      const cart = Array.isArray(window.STATE?.cart) ? window.STATE.cart : [];
+      const items = this.getActiveItems();
       const products = Array.isArray(window.PRODUCTS) ? window.PRODUCTS : [];
       const promoCodes = window.PROMO_CODES || { LUXE20: 0.2 };
       const threshold = window.FREE_SHIPPING_THRESHOLD || 2500;
 
-      const subtotal = cart.reduce((sum, item) => {
+      const subtotal = items.reduce((sum, item) => {
         const p = products.find((prod) => prod.id == item.id);
-        const price = p ? p.price : (item.price || 0);
-        return sum + (price * item.quantity);
+        const price = typeof item.price === 'number' ? item.price : (p ? p.price : 0);
+        return sum + (price * (item.quantity || 1));
       }, 0);
 
       let discountAmount = 0;
@@ -412,8 +470,14 @@
 
     /**
      * Handle fast express order submission.
+     * Guarded with atomic this.isSubmitting lock against duplicate requests.
      */
     handleSubmit() {
+      if (this.isSubmitting) {
+        console.warn('[KINBONI QuickOrder] Order submission already in progress. Duplicate blocked.');
+        return;
+      }
+
       this.clearErrors();
 
       const nameInput = document.getElementById('order-customer-name');
@@ -462,14 +526,17 @@
         hasError = true;
       }
 
-      // 4. Cart validation
-      const cart = Array.isArray(window.STATE?.cart) ? window.STATE.cart : [];
-      if (cart.length === 0) {
-        safeShowToast('Your shopping bag is currently empty. Please select a product.', 'error');
+      // 4. Items validation
+      const items = this.getActiveItems();
+      if (!items || items.length === 0) {
+        safeShowToast('Your order has no selected products. Please choose a product.', 'error');
         hasError = true;
       }
 
       if (hasError) return;
+
+      // Lock submission
+      this.isSubmitting = true;
 
       if (submitBtn) {
         submitBtn.disabled = true;
@@ -506,7 +573,7 @@
       formData.append('customer_address', address);
       formData.append('delivery_zone', selectedZone);
       formData.append('promo_code', window.STATE?.activePromo || '');
-      formData.append('items', JSON.stringify(cart));
+      formData.append('items', JSON.stringify(items));
 
       fetch(ajaxUrl, {
         method: 'POST',
@@ -538,10 +605,12 @@
             if (formView) formView.classList.add('hidden');
             if (successView) successView.classList.remove('hidden');
 
-            // Clear cart and reset form
-            if (window.CartController && typeof window.CartController.clear === 'function') {
+            // If cart was checked out, clear cart
+            if (this.checkoutMode === 'cart' && window.CartController && typeof window.CartController.clear === 'function') {
               window.CartController.clear();
             }
+            this.directItem = null;
+
             const form = document.getElementById('quick-order-form');
             if (form) form.reset();
 
@@ -559,6 +628,7 @@
           safeShowToast('Network error while placing order. Please verify your connection.', 'error');
         })
         .finally(() => {
+          this.isSubmitting = false;
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
@@ -583,4 +653,3 @@
   }
 
 })(window, document);
-

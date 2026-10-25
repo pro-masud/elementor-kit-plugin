@@ -175,11 +175,14 @@ class Kinboni_Ajax {
 			], 429 );
 		}
 
+		// Atomic Lock: Set lock immediately before order creation to prevent concurrent duplicate orders.
+		set_transient( $lock_key, 1, 15 );
+
 		try {
 			$result = Kinboni_WooCommerce::create_cod_order( $_POST );
-			set_transient( $lock_key, 1, 15 );
 			wp_send_json_success( $result );
 		} catch ( \Exception $e ) {
+			delete_transient( $lock_key );
 			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
 		}
 	}

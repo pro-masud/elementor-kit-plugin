@@ -439,14 +439,12 @@
 
     buyNow(productId) {
       if (!productId) return;
-      this.add(productId, 1);
       this.close();
-
-      setTimeout(() => {
-        if (window.QuickOrderController && typeof window.QuickOrderController.open === 'function') {
-          window.QuickOrderController.open(productId);
-        }
-      }, 350);
+      if (window.QuickOrderController && typeof window.QuickOrderController.orderDirect === 'function') {
+        window.QuickOrderController.orderDirect(productId, 1);
+      } else if (window.QuickOrderController && typeof window.QuickOrderController.open === 'function') {
+        window.QuickOrderController.open(productId);
+      }
     },
 
     checkout() {

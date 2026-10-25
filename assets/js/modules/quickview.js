@@ -411,15 +411,22 @@
 
     buyNow() {
       if (!this.currentProduct) return;
-      if (window.CartController && typeof window.CartController.add === 'function') {
-        window.CartController.add(this.currentProduct.id, this.quantity);
-      }
+      const product = this.currentProduct;
+      const qty = this.quantity || 1;
       this.close();
+
       setTimeout(() => {
-        if (window.QuickOrderController && typeof window.QuickOrderController.open === 'function') {
-          window.QuickOrderController.open(this.currentProduct.id);
+        if (window.QuickOrderController && typeof window.QuickOrderController.orderDirect === 'function') {
+          window.QuickOrderController.orderDirect(product.id, qty, {
+            title: product.name,
+            price: product.price,
+            image: product.image,
+            category: product.category,
+          });
+        } else if (window.QuickOrderController && typeof window.QuickOrderController.open === 'function') {
+          window.QuickOrderController.open(product.id);
         }
-      }, 300);
+      }, 150);
     },
 
     toggleWishlistBtn(productId) {
