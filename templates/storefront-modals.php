@@ -242,10 +242,7 @@ defined( 'ABSPATH' ) || exit;
             <i data-lucide="zap" class="w-5 h-5 fill-gold-500"></i>
           </div>
           <div>
-            <div class="flex items-center gap-2">
-              <h3 class="font-serif text-xl sm:text-2xl font-semibold text-stone-900 dark:text-white"><?php esc_html_e( 'Confirm Your Order', 'kinboni-pro' ); ?></h3>
-              <span class="inline-block px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider"><?php esc_html_e( 'Cash on Delivery', 'kinboni-pro' ); ?></span>
-            </div>
+            <h3 class="font-serif text-xl sm:text-2xl font-semibold text-stone-900 dark:text-white"><?php esc_html_e( 'Confirm Your Order', 'kinboni-pro' ); ?></h3>
             <p class="text-xs text-stone-500 dark:text-stone-400 font-light hidden sm:block"><?php esc_html_e( 'Pay cash when package arrives at your doorstep • Zero advance payment', 'kinboni-pro' ); ?></p>
           </div>
         </div>
@@ -422,7 +419,7 @@ defined( 'ABSPATH' ) || exit;
                 class="w-full py-4 bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs sm:text-sm font-bold uppercase tracking-widest rounded-xl shadow-lg hover:shadow-gold-500/25 transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
               >
                 <i data-lucide="check-circle" class="w-5 h-5"></i>
-                <span id="order-submit-btn-text"><?php esc_html_e( 'Confirm Order (Cash on Delivery)', 'kinboni-pro' ); ?></span>
+                <span id="order-submit-btn-text"><?php esc_html_e( 'Confirm Order', 'kinboni-pro' ); ?></span>
               </button>
             </div>
           </form>
@@ -460,7 +457,7 @@ defined( 'ABSPATH' ) || exit;
         </div>
         <div class="flex justify-between items-center">
           <span class="text-stone-500"><?php esc_html_e( 'Payment Method:', 'kinboni-pro' ); ?></span>
-          <span class="font-bold text-emerald-600 dark:text-emerald-400"><?php esc_html_e( 'Cash on Delivery (COD)', 'kinboni-pro' ); ?></span>
+          <span class="font-bold text-emerald-600 dark:text-emerald-400"><?php esc_html_e( 'Cash on Delivery', 'kinboni-pro' ); ?></span>
         </div>
         <div class="flex justify-between items-center pt-2 border-t border-stone-200 dark:border-stone-800 text-sm font-bold">
           <span class="text-stone-900 dark:text-white"><?php esc_html_e( 'Total Net Payable:', 'kinboni-pro' ); ?></span>

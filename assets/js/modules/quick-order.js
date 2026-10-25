@@ -634,7 +634,7 @@
             submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
           }
           if (btnText) {
-            btnText.textContent = 'Confirm Order (Cash on Delivery)';
+            btnText.textContent = 'Confirm Order';
           }
         });
     },

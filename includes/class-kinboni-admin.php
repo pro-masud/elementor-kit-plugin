@@ -708,8 +708,8 @@ class Kinboni_Admin {
 							<!-- COD Quick Order -->
 							<div class="kb-widget-item">
 								<div>
-									<h4 class="kb-w-title"><?php esc_html_e( 'Direct Cash-on-Delivery (COD) Order Modal', 'kinboni-pro' ); ?></h4>
-									<p class="kb-w-desc"><?php esc_html_e( 'Fast 3-field direct order checkout modal for Bangladesh cash on delivery purchases.', 'kinboni-pro' ); ?></p>
+									<h4 class="kb-w-title"><?php esc_html_e( 'Direct Order Checkout Modal', 'kinboni-pro' ); ?></h4>
+									<p class="kb-w-desc"><?php esc_html_e( 'Fast 3-field direct order checkout modal for white-glove doorstep delivery.', 'kinboni-pro' ); ?></p>
 								</div>
 								<label class="kb-switch">
 									<input type="checkbox" name="settings[enable_quick_order]" value="yes" <?php checked( ( $settings['enable_quick_order'] ?? 'yes' ) === 'yes' ); ?>>

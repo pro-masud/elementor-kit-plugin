@@ -240,15 +240,44 @@ class Kinboni_WooCommerce {
 			throw new \Exception( sprintf( __( 'Product #%s could not be found.', 'kinboni-pro' ), $product_id ) );
 		}
 
+		$pid      = $product->get_id();
 		$image_id = $product->get_image_id();
 		$main_img = $image_id ? wp_get_attachment_image_url( $image_id, 'large' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'large' ) : '' );
 
-		$gallery = [ $main_img ];
+		// Retrieve hover / alternate image from metadata or media attachment
+		$hover_id  = get_post_meta( $pid, '_kinboni_hover_image_id', true );
+		$hover_url = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( get_post_meta( $pid, '_kinboni_hover_image_url', true ) ?: '' );
+
+		$gallery = [];
+		if ( ! empty( $main_img ) ) {
+			$gallery[] = $main_img;
+		}
+
+		// Add WooCommerce native gallery images
 		foreach ( $product->get_gallery_image_ids() as $gid ) {
 			$gurl = wp_get_attachment_image_url( $gid, 'large' );
 			if ( $gurl && ! in_array( $gurl, $gallery, true ) ) {
 				$gallery[] = $gurl;
 			}
+		}
+
+		// Ensure alternate / hover image is included in gallery for multi-angle preview
+		if ( ! empty( $hover_url ) && ! in_array( $hover_url, $gallery, true ) ) {
+			$gallery[] = $hover_url;
+		}
+
+		// Check any extra gallery URLs in postmeta
+		$extra_gallery = get_post_meta( $pid, '_kinboni_gallery_urls', true );
+		if ( ! empty( $extra_gallery ) && is_array( $extra_gallery ) ) {
+			foreach ( $extra_gallery as $eg_url ) {
+				if ( ! empty( $eg_url ) && is_string( $eg_url ) && ! in_array( $eg_url, $gallery, true ) ) {
+					$gallery[] = $eg_url;
+				}
+			}
+		}
+
+		if ( empty( $hover_url ) ) {
+			$hover_url = count( $gallery ) > 1 ? $gallery[1] : ( $gallery[0] ?? $main_img );
 		}
 
 		$cats     = wp_get_post_terms( $product->get_id(), 'product_cat' );
@@ -285,7 +314,7 @@ class Kinboni_WooCommerce {
 			'badge'                  => $cat_name,
 			'categoryLabel'          => $cat_name,
 			'image'                  => $gallery[0] ?? $main_img,
-			'hoverImage'             => count( $gallery ) > 1 ? $gallery[1] : ( $gallery[0] ?? $main_img ),
+			'hoverImage'             => ! empty( $hover_url ) ? $hover_url : ( count( $gallery ) > 1 ? $gallery[1] : ( $gallery[0] ?? $main_img ) ),
 			'gallery'                => $gallery,
 			'description'            => $short_desc,
 			'permalink'              => $product->get_permalink(),
@@ -1237,7 +1266,7 @@ class Kinboni_WooCommerce {
 		$order = wc_create_order( [
 			'status'        => 'pending',
 			'customer_note' => sprintf(
-				__( 'Kinboni Express COD Order. Zone: %s.', 'kinboni-pro' ),
+				__( 'Kinboni Express Order. Zone: %s.', 'kinboni-pro' ),
 				( 'inside' === $delivery_zone ? 'Inside Dhaka' : 'Outside Dhaka' )
 			),
 		] );
@@ -1290,9 +1319,9 @@ class Kinboni_WooCommerce {
 		$order->set_address( $address_fields, 'billing' );
 		$order->set_address( $address_fields, 'shipping' );
 
-		// 10. Payment Method: Cash on Delivery (COD)
+		// 10. Payment Method: Cash on Delivery
 		$order->set_payment_method( 'cod' );
-		$order->set_payment_method_title( __( 'Cash on Delivery (COD)', 'kinboni-pro' ) );
+		$order->set_payment_method_title( __( 'Cash on Delivery', 'kinboni-pro' ) );
 
 		// 11. Calculate final totals & save
 		$order->calculate_totals();
@@ -1301,7 +1330,7 @@ class Kinboni_WooCommerce {
 		$order->set_total( $final_total );
 
 		// Set status to processing
-		$order->set_status( 'processing', __( 'Order placed via Kinboni Express COD Checkout.', 'kinboni-pro' ) );
+		$order->set_status( 'processing', __( 'Order placed via Kinboni Express Checkout.', 'kinboni-pro' ) );
 		$order->save();
 
 		// 12. Reduce stock levels

@@ -36,3 +36,4 @@ require_once KINBONI_DIR . 'includes/class-kinboni-loader.php';
  * ────────────────────────────────────────────── */
 Kinboni_Loader::init();
 
+

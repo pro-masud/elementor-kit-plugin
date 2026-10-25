@@ -213,7 +213,7 @@
               type="button" 
               onclick="if(window.QuickOrderController) QuickOrderController.orderDirect(${id}, 1); else if(window.CartController) CartController.buyNow(${id});"
               class="kb-btn-ordernow flex-1 py-2.5 px-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-gold-500/25 active:scale-95"
-              title="Direct Order with Cash on Delivery"
+              title="Direct Order"
             >
               <i data-lucide="zap" class="w-3.5 h-3.5 fill-stone-950 flex-shrink-0"></i>
               <span class="whitespace-nowrap">Order Now</span>

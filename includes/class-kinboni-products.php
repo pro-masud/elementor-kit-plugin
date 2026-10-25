@@ -827,6 +827,20 @@ class Kinboni_Products {
 				$hover_url = $img_url;
 			}
 
+			// Ensure combined gallery includes main and hover images for rich multi-thumbnail Quick View
+			$combined_gallery = [];
+			if ( ! empty( $img_url ) ) {
+				$combined_gallery[] = $img_url;
+			}
+			foreach ( $gallery_urls as $gu ) {
+				if ( ! in_array( $gu, $combined_gallery, true ) ) {
+					$combined_gallery[] = $gu;
+				}
+			}
+			if ( ! empty( $hover_url ) && ! in_array( $hover_url, $combined_gallery, true ) ) {
+				$combined_gallery[] = $hover_url;
+			}
+
 			// Categories
 			$terms = wp_get_post_terms( $pid, 'product_cat' );
 			$cat_slug  = 'all';
@@ -870,7 +884,7 @@ class Kinboni_Products {
 				'badge'         => $badge,
 				'image'         => $img_url,
 				'hoverImage'    => $hover_url,
-				'gallery'       => $gallery_urls,
+				'gallery'       => $combined_gallery,
 				'description'   => $p->get_description() ?: $p->get_short_description(),
 				'short_desc'    => $p->get_short_description(),
 				'specs'         => array_values( array_filter( $specs ) ),

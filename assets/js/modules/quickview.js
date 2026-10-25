@@ -32,6 +32,16 @@
     }
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function renderStarRating(rating, reviewsCount) {
     const score = Number(rating) || 5.0;
     const count = Number(reviewsCount) || 18;
@@ -219,9 +229,46 @@
       const formattedPrice = product.formattedPrice || safeFormatCurrency(priceNum);
       const formattedOrigPrice = origPriceNum ? safeFormatCurrency(origPriceNum) : '';
 
-      const gallery = (product.gallery && Array.isArray(product.gallery) && product.gallery.length > 0)
-        ? product.gallery
-        : [product.image, product.hoverImage].filter(Boolean);
+      // Normalize gallery list: preserve existing images, hoverImage, and all gallery items
+      let rawGallery = [];
+      if (Array.isArray(product.gallery) && product.gallery.length > 0) {
+        rawGallery = product.gallery;
+      } else if (Array.isArray(product.gallery_urls) && product.gallery_urls.length > 0) {
+        rawGallery = product.gallery_urls;
+      }
+
+      let gallery = rawGallery
+        .map((item) => (typeof item === 'object' && item !== null ? (item.url || item.src || item.large || '') : String(item || '')))
+        .filter(Boolean);
+
+      // Ensure main image is present
+      if (product.image && !gallery.includes(product.image)) {
+        gallery.unshift(product.image);
+      }
+
+      // Ensure hover image is present
+      if (product.hoverImage && !gallery.includes(product.hoverImage)) {
+        gallery.push(product.hoverImage);
+      }
+
+      // Merge with in-memory cached product data so AJAX re-renders never strip gallery images
+      const cached = window.PRODUCTS?.find((p) => p.id === product.id || p.id == product.id);
+      if (cached) {
+        if (cached.hoverImage && !gallery.includes(cached.hoverImage)) {
+          gallery.push(cached.hoverImage);
+        }
+        if (Array.isArray(cached.gallery)) {
+          cached.gallery.forEach((g) => {
+            const u = typeof g === 'object' && g !== null ? (g.url || g.src || '') : String(g || '');
+            if (u && !gallery.includes(u)) {
+              gallery.push(u);
+            }
+          });
+        }
+      }
+
+      // De-duplicate while preserving order
+      gallery = Array.from(new Set(gallery.filter(Boolean)));
 
       const specs = (product.specs && Array.isArray(product.specs) && product.specs.length > 0)
         ? product.specs
@@ -240,15 +287,17 @@
       let galleryThumbsHtml = '';
       if (gallery.length > 1) {
         galleryThumbsHtml = `
-          <div class="flex items-center justify-center gap-3">
+          <div class="flex items-center justify-center gap-3 pt-1">
             ${gallery.map((imgUrl, idx) => `
               <button 
                 type="button" 
-                onclick="QuickViewController.switchImage(${idx}, '${imgUrl}')"
-                class="quickview-thumb-btn w-14 h-14 rounded-xl border-2 ${idx === 0 ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-transparent opacity-60 hover:opacity-100'} overflow-hidden shadow-sm transition-all"
-                aria-label="${product.name} angle ${idx + 1}"
+                data-thumb-index="${idx}"
+                data-img-url="${imgUrl}"
+                onclick="QuickViewController.switchImage(${idx}, this.dataset.imgUrl)"
+                class="quickview-thumb-btn w-14 h-14 rounded-xl border-2 ${idx === 0 ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-transparent opacity-60 hover:opacity-100'} overflow-hidden shadow-sm transition-all active:scale-95 cursor-pointer bg-stone-100 dark:bg-stone-900"
+                aria-label="${escapeHtml(product.name)} angle ${idx + 1}"
               >
-                <img src="${imgUrl}" alt="${product.name} angle ${idx + 1}" class="w-full h-full object-cover" />
+                <img src="${imgUrl}" alt="${escapeHtml(product.name)} angle ${idx + 1}" class="w-full h-full object-cover" />
               </button>
             `).join('')}
           </div>
