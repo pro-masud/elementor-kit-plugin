@@ -32,6 +32,10 @@ class Kinboni_Ajax {
 		add_action( 'wp_ajax_kinboni_quick_view',        [ __CLASS__, 'quick_view' ] );
 		add_action( 'wp_ajax_nopriv_kinboni_quick_view', [ __CLASS__, 'quick_view' ] );
 
+		// ── Newsletter Subscription ───────────────────────────
+		add_action( 'wp_ajax_kinboni_subscribe_newsletter',        [ __CLASS__, 'subscribe_newsletter' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_subscribe_newsletter', [ __CLASS__, 'subscribe_newsletter' ] );
+
 		// ── Add to Cart ───────────────────────────────────────
 		// add_action( 'wp_ajax_kinboni_add_to_cart',        [ __CLASS__, 'add_to_cart' ] );
 		// add_action( 'wp_ajax_nopriv_kinboni_add_to_cart', [ __CLASS__, 'add_to_cart' ] );
@@ -110,6 +114,44 @@ class Kinboni_Ajax {
 		];
 
 		wp_send_json_success( $data );
+	}
+
+	/**
+	 * AJAX endpoint for VIP newsletter subscription.
+	 */
+	public static function subscribe_newsletter(): void {
+		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
+		if ( ! is_email( $email ) ) {
+			wp_send_json_error( [ 'message' => __( 'Please enter a valid email address.', 'kinboni-pro' ) ], 400 );
+		}
+
+		$subscribers = get_option( 'kinboni_newsletter_subscribers', [] );
+		if ( ! is_array( $subscribers ) ) {
+			$subscribers = [];
+		}
+
+		$already_subscribed = false;
+		foreach ( $subscribers as $sub ) {
+			if ( is_array( $sub ) && isset( $sub['email'] ) && strtolower( $sub['email'] ) === strtolower( $email ) ) {
+				$already_subscribed = true;
+				break;
+			}
+		}
+
+		if ( ! $already_subscribed ) {
+			$subscribers[] = [
+				'email'      => $email,
+				'subscribed' => current_time( 'mysql' ),
+				'ip'         => sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) ),
+			];
+			update_option( 'kinboni_newsletter_subscribers', $subscribers, false );
+			do_action( 'kinboni_vip_subscriber_added', $email );
+		}
+
+		wp_send_json_success( [
+			'message' => __( 'Subscribed to Kinboni VIP Archive.', 'kinboni-pro' ),
+			'promo'   => 'LUXE20',
+		] );
 	}
 }
 

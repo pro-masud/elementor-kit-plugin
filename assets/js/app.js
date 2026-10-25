@@ -1613,6 +1613,11 @@ const InteractionController = {
     const newsletterForm = document.getElementById('newsletter-form');
     if (newsletterForm) {
       newsletterForm.addEventListener('submit', (e) => {
+        // If external action URL is set, let the browser submit normally
+        if (newsletterForm.getAttribute('action')) {
+          return;
+        }
+
         e.preventDefault();
         const emailInput = document.getElementById('newsletter-email');
         const feedbackEl = document.getElementById('newsletter-feedback');
@@ -1627,12 +1632,25 @@ const InteractionController = {
           return;
         }
 
+        const promoCode = newsletterForm.getAttribute('data-promo') || 'LUXE20';
+        const customSuccess = newsletterForm.getAttribute('data-success');
+        const successHtml = customSuccess || `✨ Welcome to The Kinboni Circle! Your VIP invitation and private 20% privilege code (<strong>${promoCode}</strong>) have been delivered.`;
+
         if (feedbackEl) {
           feedbackEl.className = 'mt-3 text-xs text-emerald-500 dark:text-emerald-400 font-semibold block animate-fade-in';
-          feedbackEl.innerHTML = `✨ Welcome to The Kinboni Circle! Your VIP invitation and private 20% privilege code (<strong>LUXE20</strong>) have been delivered.`;
+          feedbackEl.innerHTML = successHtml;
         }
         if (emailInput) emailInput.value = '';
         showToast('Subscribed to Kinboni VIP Archive', 'success');
+
+        // Async WordPress AJAX storage
+        try {
+          const ajaxUrl = (typeof kinboni_vars !== 'undefined' && kinboni_vars.ajax_url) ? kinboni_vars.ajax_url : '/wp-admin/admin-ajax.php';
+          const fd = new FormData();
+          fd.append('action', 'kinboni_subscribe_newsletter');
+          fd.append('email', email);
+          fetch(ajaxUrl, { method: 'POST', body: fd }).catch(() => {});
+        } catch (err) {}
       });
     }
 

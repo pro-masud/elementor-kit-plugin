@@ -1,18 +1,4 @@
 <?php
-/**
- * Widget: Header
- *
- * A fully customizable luxury header for Elementor.
- * Features:
- *  - Dynamic Logo (Image upload with responsive dimensions, or Monogram & Text)
- *  - Dynamic Navigation (WordPress Menu from Appearance > Menus, or Custom Repeater Links)
- *  - Right Action Buttons with individual ON/OFF switchers (Search, Dark/Light, Account, Wishlist, Bag)
- *  - Sticky or static positioning
- *  - Custom colors and typography controls
- *
- * @package KinboniPro\Widgets
- */
-
 namespace KinboniPro\Widgets;
 
 defined( 'ABSPATH' ) || exit;
