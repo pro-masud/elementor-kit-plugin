@@ -326,6 +326,16 @@
       this.moveToBag(productId);
     },
 
+    has(productId) {
+      const pidNum = Number(productId) || productId;
+      const list = Array.isArray(window.STATE?.wishlist) ? window.STATE.wishlist : [];
+      return list.includes(pidNum) || list.includes(productId);
+    },
+
+    isWishlisted(productId) {
+      return this.has(productId);
+    },
+
     updateBadges() {
       const count = (this.wishlistData && typeof this.wishlistData.count === 'number')
         ? this.wishlistData.count
