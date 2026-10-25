@@ -299,7 +299,7 @@ class Widget_Featured extends \Elementor\Widget_Base {
 		?>
 
 		<section id="<?php echo $section_id; ?>" class="kb-featured-section py-16 sm:py-24 scroll-mt-24">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 				
 				<!-- Section Header -->
 				<div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
@@ -329,7 +329,7 @@ class Widget_Featured extends \Elementor\Widget_Base {
 				</div>
 
 				<!-- Responsive Grid for 8 Featured Products -->
-				<div id="featured-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 <?php echo esc_attr( $col_class ); ?> gap-6 sm:gap-8">
+				<div id="featured-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 <?php echo esc_attr( $col_class ); ?> gap-6 sm:gap-8">
 					<?php
 					if ( 'wc' === $source && function_exists( 'wc_get_products' ) ) {
 						$wc_limit = ! empty( $s['wc_limit'] ) ? absint( $s['wc_limit'] ) : 8;

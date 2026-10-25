@@ -468,7 +468,7 @@ class Widget_Promo_Banner extends \Elementor\Widget_Base {
 				<div class="kb-promo-glow absolute top-0 right-0 w-80 h-80 bg-gold-500/10 rounded-full blur-3xl pointer-events-none"></div>
 			<?php endif; ?>
 
-			<div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 				<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 					
 					<!-- Left Editorial Column -->

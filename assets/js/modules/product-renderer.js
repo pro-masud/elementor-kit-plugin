@@ -267,9 +267,15 @@
       this.renderBestSellers('all');
     },
 
-    renderFeatured() {
+    renderFeatured(force = false) {
       const grid = document.getElementById('featured-products-grid');
       if (!grid) return;
+
+      // Guard: On initial load, preserve server-side PHP rendered cards (prevents CLS & SEO issues)
+      if (!force && grid.children.length > 0 && !grid.querySelector('.col-span-full')) {
+        safeRefreshIcons();
+        return;
+      }
 
       const products = getProductsList();
 
@@ -304,7 +310,7 @@
       safeRefreshIcons();
     },
 
-    renderBestSellers(filter = 'all') {
+    renderBestSellers(filter = 'all', force = false) {
       this.activeFilter = filter;
       if (window.STATE) {
         window.STATE.activeFilter = filter;
@@ -312,6 +318,14 @@
 
       const grid = document.getElementById('bestsellers-grid');
       if (!grid) return;
+
+      const fLower = (filter || 'all').toLowerCase();
+
+      // Guard: On initial load with 'all' filter, preserve server-side PHP rendered cards
+      if (!force && fLower === 'all' && grid.children.length > 0 && !grid.querySelector('.col-span-full')) {
+        safeRefreshIcons();
+        return;
+      }
 
       const products = getProductsList();
 

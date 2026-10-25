@@ -666,3 +666,115 @@ input:checked + .kb-slider:before {
 	gap: 8px;
 }
 
+/* ═══════════════════════════════════════
+   DASHBOARD LIGHT MODE
+   ═══════════════════════════════════════ */
+.kb-theme-toggle-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	cursor: pointer;
+	user-select: none;
+	font-weight: 600;
+}
+
+body.kb-admin-light-mode #wpcontent,
+body.kb-admin-light-mode .kinboni-admin-wrap,
+.kinboni-admin-wrap.kb-light-theme {
+	--kb-dark-bg: #f8f6f2;
+	--kb-card-bg: #ffffff;
+	--kb-card-hover: #faf8f5;
+	--kb-border: #e6e0d6;
+	--kb-border-gold: rgba(197, 160, 89, 0.45);
+	--kb-text-white: #1c1917;
+	--kb-text-muted: #64748b;
+}
+
+body.kb-admin-light-mode #wpcontent {
+	background: #f8f6f2 !important;
+}
+
+body.kb-admin-light-mode .kinboni-admin-wrap,
+.kinboni-admin-wrap.kb-light-theme {
+	color: #1c1917 !important;
+}
+
+body.kb-admin-light-mode .kb-brand-titles h1,
+.kinboni-admin-wrap.kb-light-theme .kb-brand-titles h1,
+body.kb-admin-light-mode .kb-box-title,
+.kinboni-admin-wrap.kb-light-theme .kb-box-title,
+body.kb-admin-light-mode .kb-w-title,
+.kinboni-admin-wrap.kb-light-theme .kb-w-title,
+body.kb-admin-light-mode .kb-tab-btn,
+.kinboni-admin-wrap.kb-light-theme .kb-tab-btn,
+body.kb-admin-light-mode .kb-metric-val,
+.kinboni-admin-wrap.kb-light-theme .kb-metric-val,
+body.kb-admin-light-mode .kb-section-subheading,
+.kinboni-admin-wrap.kb-light-theme .kb-section-subheading {
+	color: #1c1917 !important;
+}
+
+body.kb-admin-light-mode .kb-admin-header,
+.kinboni-admin-wrap.kb-light-theme .kb-admin-header,
+body.kb-admin-light-mode .kb-card-box,
+.kinboni-admin-wrap.kb-light-theme .kb-card-box,
+body.kb-admin-light-mode .kb-metric-card,
+.kinboni-admin-wrap.kb-light-theme .kb-metric-card,
+body.kb-admin-light-mode .kb-widget-item,
+.kinboni-admin-wrap.kb-light-theme .kb-widget-item {
+	background: #ffffff !important;
+	border-color: #e5e0d8 !important;
+	box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
+}
+
+body.kb-admin-light-mode .kb-input,
+.kinboni-admin-wrap.kb-light-theme .kb-input,
+body.kb-admin-light-mode .kb-textarea,
+.kinboni-admin-wrap.kb-light-theme .kb-textarea,
+body.kb-admin-light-mode select.kb-input,
+.kinboni-admin-wrap.kb-light-theme select.kb-input {
+	background: #ffffff !important;
+	border-color: #d6cfc4 !important;
+	color: #1c1917 !important;
+}
+
+body.kb-admin-light-mode .kb-input:focus,
+.kinboni-admin-wrap.kb-light-theme .kb-input:focus,
+body.kb-admin-light-mode .kb-textarea:focus,
+.kinboni-admin-wrap.kb-light-theme .kb-textarea:focus {
+	border-color: var(--kb-gold) !important;
+	box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.2) !important;
+}
+
+body.kb-admin-light-mode .kb-btn-secondary,
+.kinboni-admin-wrap.kb-light-theme .kb-btn-secondary {
+	background: #f1ede6 !important;
+	border-color: #d8d0c2 !important;
+	color: #1c1917 !important;
+}
+
+body.kb-admin-light-mode .kb-btn-secondary:hover,
+.kinboni-admin-wrap.kb-light-theme .kb-btn-secondary:hover {
+	background: #e7e0d3 !important;
+}
+
+body.kb-admin-light-mode .kb-admin-table th,
+.kinboni-admin-wrap.kb-light-theme .kb-admin-table th {
+	background: #f5f2eb !important;
+	color: #44403c !important;
+	border-color: #e5e0d8 !important;
+}
+
+body.kb-admin-light-mode .kb-admin-table td,
+.kinboni-admin-wrap.kb-light-theme .kb-admin-table td {
+	color: #292524 !important;
+	border-color: #e5e0d8 !important;
+}
+
+body.kb-admin-light-mode .kb-badge-muted,
+.kinboni-admin-wrap.kb-light-theme .kb-badge-muted {
+	background: #ebe5dc !important;
+	border-color: #d8d0c2 !important;
+	color: #57534e !important;
+}
+

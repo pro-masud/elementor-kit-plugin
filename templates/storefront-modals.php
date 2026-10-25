@@ -136,10 +136,10 @@ defined( 'ABSPATH' ) || exit;
 </aside>
 
 <!-- 3. PRODUCT QUICK VIEW MODAL -->
-<div id="quickview-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+<div id="quickview-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 md:p-6">
   <div id="quickview-backdrop" class="fixed inset-0 bg-stone-950/70 backdrop-blur-md"></div>
-  <div class="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 sm:p-8 z-10 animate-slide-up">
-    <button type="button" id="close-quickview-btn" class="absolute top-4 right-4 w-9 h-9 rounded-full text-stone-400 hover:text-stone-900 dark:hover:text-white bg-stone-100 dark:bg-stone-800 flex items-center justify-center transition-colors" aria-label="Close modal">
+  <div class="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-5 sm:p-8 z-10 animate-slide-up">
+    <button type="button" id="close-quickview-btn" class="sticky top-2 float-right -mt-1 -mr-1 sm:-mt-2 sm:-mr-2 z-20 w-9 h-9 rounded-full text-stone-400 hover:text-stone-900 dark:hover:text-white bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur shadow-sm flex items-center justify-center transition-colors" aria-label="Close modal">
       <i data-lucide="x" class="w-5 h-5"></i>
     </button>
     <div id="quickview-content"></div>
@@ -194,13 +194,15 @@ defined( 'ABSPATH' ) || exit;
     </button>
   </div>
 
-  <nav class="flex-grow p-6 space-y-4">
-    <a href="#hero" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Home</a>
-    <a href="#categories" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Collections</a>
-    <a href="#featured" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Featured Shop</a>
-    <a href="#bestsellers" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Best Sellers</a>
-    <a href="#heritage" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Our Story</a>
-    <a href="#testimonials" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Patron Reviews</a>
+  <nav class="flex-grow p-6 space-y-4 overflow-y-auto">
+    <div id="mobile-drawer-links" class="space-y-4">
+      <a href="#hero" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Home</a>
+      <a href="#categories" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Collections</a>
+      <a href="#featured" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Featured Shop</a>
+      <a href="#bestsellers" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Best Sellers</a>
+      <a href="#heritage" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Our Story</a>
+      <a href="#testimonials" class="mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors">Patron Reviews</a>
+    </div>
     
     <div class="pt-6 border-t border-stone-200 dark:border-stone-800 space-y-3">
       <button type="button" onclick="CartController.open()" class="w-full flex items-center justify-between py-2 text-xs uppercase font-bold tracking-wider text-stone-700 dark:text-stone-300 hover:text-gold-600">
@@ -252,7 +254,7 @@ defined( 'ABSPATH' ) || exit;
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 min-h-0">
-        <div class="lg:col-span-5 p-6 sm:p-7 bg-stone-50/70 dark:bg-stone-950/70 lg:border-r border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-6">
+        <div class="lg:col-span-5 order-2 lg:order-1 p-5 sm:p-7 bg-stone-50/70 dark:bg-stone-950/70 lg:border-r border-t lg:border-t-0 border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-6">
           <div class="space-y-4">
             <div class="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-800">
               <span class="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400"><?php esc_html_e( 'Order Items', 'kinboni-pro' ); ?></span>
@@ -318,7 +320,7 @@ defined( 'ABSPATH' ) || exit;
           </div>
         </div>
 
-        <div class="lg:col-span-7 p-6 sm:p-8">
+        <div class="lg:col-span-7 order-1 lg:order-2 p-5 sm:p-8">
           <div class="mb-5">
             <span class="text-xs font-bold uppercase tracking-wider text-gold-600 dark:text-gold-400"><?php esc_html_e( 'Recipient Details', 'kinboni-pro' ); ?></span>
             <h4 class="font-serif text-lg sm:text-xl font-semibold text-stone-900 dark:text-white mt-0.5"><?php esc_html_e( 'Where should we deliver your order?', 'kinboni-pro' ); ?></h4>
@@ -459,6 +461,10 @@ defined( 'ABSPATH' ) || exit;
           <span class="text-stone-500"><?php esc_html_e( 'Payment Method:', 'kinboni-pro' ); ?></span>
           <span class="font-bold text-emerald-600 dark:text-emerald-400"><?php esc_html_e( 'Cash on Delivery', 'kinboni-pro' ); ?></span>
         </div>
+        <div id="confirmed-discount-row" class="hidden flex justify-between items-center text-emerald-600 dark:text-emerald-400">
+          <span class="text-stone-500"><?php esc_html_e( 'Privilege Discount:', 'kinboni-pro' ); ?></span>
+          <span id="confirmed-order-discount" class="font-bold"></span>
+        </div>
         <div class="flex justify-between items-center pt-2 border-t border-stone-200 dark:border-stone-800 text-sm font-bold">
           <span class="text-stone-900 dark:text-white"><?php esc_html_e( 'Total Net Payable:', 'kinboni-pro' ); ?></span>
           <span id="confirmed-order-total" class="text-gold-600 dark:text-gold-400 font-serif text-lg"></span>
@@ -512,8 +518,8 @@ defined( 'ABSPATH' ) || exit;
       </div>
     </div>
 
-    <button id="close-live-sale-btn" type="button" onclick="event.stopPropagation(); LiveSalesController.hide();" class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors" aria-label="Dismiss sale alert">
-      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+    <button id="close-live-sale-btn" type="button" onclick="event.stopPropagation(); LiveSalesController.hide();" class="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white bg-stone-100/80 dark:bg-stone-800/80 hover:bg-stone-200 transition-colors" aria-label="Dismiss sale alert">
+      <i data-lucide="x" class="w-4 h-4"></i>
     </button>
   </div>
 </div>
@@ -529,7 +535,7 @@ defined( 'ABSPATH' ) || exit;
 </button>
 
 <!-- 9. TOAST NOTIFICATION CONTAINER -->
-<div id="toast-container" class="fixed top-4 right-4 sm:top-auto sm:bottom-6 sm:left-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-auto"></div>
+<div id="toast-container" class="fixed top-5 right-5 z-[999999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-auto"></div>
 
 <?php
 $kb_settings = class_exists( 'Kinboni_Admin' ) ? Kinboni_Admin::get_settings() : [];

@@ -63,6 +63,9 @@ class Kinboni_Admin {
 			// VIP Circle & Promo Code
 			'vip_promo_code'         => 'LUXE20',
 			'vip_discount_percent'   => 20,
+
+			// Currency & Localization
+			'store_currency'         => 'BDT',
 		];
 	}
 
@@ -228,6 +231,15 @@ class Kinboni_Admin {
 		// VIP Settings
 		$current['vip_promo_code']       = isset( $raw_data['vip_promo_code'] ) ? strtoupper( sanitize_text_field( $raw_data['vip_promo_code'] ) ) : 'LUXE20';
 		$current['vip_discount_percent'] = isset( $raw_data['vip_discount_percent'] ) ? max( 1, min( 99, absint( $raw_data['vip_discount_percent'] ) ) ) : 20;
+
+		// Currency & Localization (Sync with WooCommerce automatically)
+		if ( ! empty( $raw_data['store_currency'] ) ) {
+			$new_currency = strtoupper( sanitize_text_field( $raw_data['store_currency'] ) );
+			$current['store_currency'] = $new_currency;
+			if ( class_exists( 'WooCommerce' ) || function_exists( 'update_option' ) ) {
+				update_option( 'woocommerce_currency', $new_currency );
+			}
+		}
 
 		update_option( self::SETTINGS_KEY, $current );
 
@@ -441,6 +453,11 @@ class Kinboni_Admin {
 					</div>
 				</div>
 				<div class="kb-header-actions">
+					<button type="button" id="kb-theme-toggle-btn" class="kb-btn-secondary kb-theme-toggle-btn" title="<?php esc_attr_e( 'Toggle Dashboard Dark / Light Mode', 'kinboni-pro' ); ?>">
+						<span class="dashicons dashicons-moon kb-moon-icon" style="font-size: 15px; width: 15px; height: 15px;"></span>
+						<span class="dashicons dashicons-lightbulb kb-sun-icon" style="display:none; font-size: 15px; width: 15px; height: 15px;"></span>
+						<span class="kb-theme-label"><?php esc_html_e( 'Dark Mode', 'kinboni-pro' ); ?></span>
+					</button>
 					<button type="button" id="kb-btn-purge-cache" class="kb-btn-secondary" title="<?php esc_attr_e( 'Regenerate assets and clear transients', 'kinboni-pro' ); ?>">
 						<span class="dashicons dashicons-update" style="font-size: 15px; width: 15px; height: 15px;"></span>
 						<span><?php esc_html_e( 'Purge Cache', 'kinboni-pro' ); ?></span>
@@ -755,7 +772,37 @@ class Kinboni_Admin {
 
 						</div>
 
-						<h3 style="font-size: 15px; color: #fff; margin: 20px 0 12px 0;"><?php esc_html_e( 'Concierge & Notification Settings', 'kinboni-pro' ); ?></h3>
+						<h3 style="font-size: 15px; color: #fff; margin: 20px 0 12px 0;" class="kb-section-subheading"><?php esc_html_e( 'Currency & Localization Settings', 'kinboni-pro' ); ?></h3>
+
+						<?php
+						$current_wc_currency = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : ( $settings['store_currency'] ?? 'BDT' );
+						$supported_currencies = [
+							'BDT' => __( 'BDT — Bangladeshi Taka (৳)', 'kinboni-pro' ),
+							'USD' => __( 'USD — United States Dollar ($)', 'kinboni-pro' ),
+							'EUR' => __( 'EUR — Euro (€)', 'kinboni-pro' ),
+							'GBP' => __( 'GBP — British Pound (£)', 'kinboni-pro' ),
+							'INR' => __( 'INR — Indian Rupee (₹)', 'kinboni-pro' ),
+							'AED' => __( 'AED — UAE Dirham (د.إ)', 'kinboni-pro' ),
+							'SAR' => __( 'SAR — Saudi Riyal (﷼)', 'kinboni-pro' ),
+							'CAD' => __( 'CAD — Canadian Dollar ($)', 'kinboni-pro' ),
+							'AUD' => __( 'AUD — Australian Dollar ($)', 'kinboni-pro' ),
+						];
+						?>
+						<div class="kb-form-row">
+							<label><?php esc_html_e( 'Storefront & WooCommerce Currency', 'kinboni-pro' ); ?></label>
+							<select class="kb-input" name="settings[store_currency]" style="max-width: 380px;">
+								<?php foreach ( $supported_currencies as $curr_code => $curr_label ) : ?>
+									<option value="<?php echo esc_attr( $curr_code ); ?>" <?php selected( $current_wc_currency, $curr_code ); ?>>
+										<?php echo esc_html( $curr_label ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<p style="font-size: 11px; color: var(--kb-text-muted); margin-top: 5px;">
+								<?php esc_html_e( 'Saving here automatically updates WooCommerce core currency, all product prices, the cart drawer, and checkout modals.', 'kinboni-pro' ); ?>
+							</p>
+						</div>
+
+						<h3 style="font-size: 15px; color: #fff; margin: 24px 0 12px 0;" class="kb-section-subheading"><?php esc_html_e( 'Concierge & Notification Settings', 'kinboni-pro' ); ?></h3>
 
 						<div class="kb-form-row">
 							<label><?php esc_html_e( 'Sales Notification Interval (Seconds)', 'kinboni-pro' ); ?></label>

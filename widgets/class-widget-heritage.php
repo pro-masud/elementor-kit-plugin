@@ -393,7 +393,7 @@ class Widget_Heritage extends \Elementor\Widget_Base {
 		?>
 
 		<section id="heritage" class="kb-heritage-section py-16 sm:py-24 bg-stone-100/60 dark:bg-stone-950/60 border-t border-b border-stone-200/70 dark:border-stone-800/80 scroll-mt-24">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 				<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
 					<!-- Layered Editorial Imagery -->

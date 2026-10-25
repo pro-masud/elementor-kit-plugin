@@ -18,7 +18,7 @@
     if (typeof window.formatCurrency === 'function') {
       return window.formatCurrency(amount);
     }
-    const symbol = (window.kinboni && window.kinboni.currency_symbol) || '৳';
+    const symbol = (window.kinboni && (window.kinboni.currency || window.kinboni.currency_symbol)) || '৳';
     return symbol + Number(amount || 0).toLocaleString('en-US');
   }
 
@@ -132,6 +132,11 @@
           if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
             this.close();
           }
+        });
+
+        // Listen for global promo updates (e.g. from Cart drawer or voucher clicks)
+        window.addEventListener('kinboni:promo_updated', () => {
+          this.updateSummary();
         });
       }
     },
@@ -290,7 +295,8 @@
 
       const subtotal = items.reduce((sum, item) => {
         const p = products.find((prod) => prod.id == item.id);
-        const price = typeof item.price === 'number' ? item.price : (p ? p.price : 0);
+        const rawPrice = item.price !== undefined ? item.price : (p ? p.price : 0);
+        const price = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice).replace(/[^\d.]/g, '')) || 0);
         return sum + (price * (item.quantity || 1));
       }, 0);
 
@@ -323,6 +329,10 @@
       this.calculateTotals();
     },
 
+    updateSummary() {
+      this.calculateTotals();
+    },
+
     /**
      * Recompute totals and update modal summary elements.
      */
@@ -342,14 +352,29 @@
 
       const subtotal = items.reduce((sum, item) => {
         const p = products.find((prod) => prod.id == item.id);
-        const price = typeof item.price === 'number' ? item.price : (p ? p.price : 0);
+        const rawPrice = item.price !== undefined ? item.price : (p ? p.price : 0);
+        const price = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice).replace(/[^\d.]/g, '')) || 0);
         return sum + (price * (item.quantity || 1));
       }, 0);
 
       let discountAmount = 0;
+      let discountLabel = '';
       const activePromo = window.STATE?.activePromo;
-      if (activePromo && promoCodes[activePromo]) {
-        discountAmount = Math.round(subtotal * promoCodes[activePromo]);
+      const promoInfo = window.STATE?.activePromoInfo;
+
+      if (activePromo && subtotal > 0) {
+        if (promoInfo && promoInfo.type === 'percent' && promoInfo.amount > 0) {
+          discountAmount = Math.round(subtotal * (promoInfo.amount / 100));
+          discountLabel = `${promoInfo.amount}% Privilege Applied`;
+        } else if (promoInfo && promoInfo.fixed_amount > 0) {
+          discountAmount = Math.min(subtotal, Math.round(promoInfo.fixed_amount));
+          discountLabel = `Privilege Applied`;
+        } else {
+          const promoCodes = window.PROMO_CODES || { LUXE20: 0.2 };
+          const rate = promoCodes[activePromo] || 0.2;
+          discountAmount = Math.round(subtotal * rate);
+          discountLabel = `${Math.round(rate * 100)}% Privilege Applied`;
+        }
       }
 
       const isFree = subtotal >= threshold;
@@ -386,14 +411,14 @@
       // Modal promo badge
       const modalPromoBadge = document.getElementById('order-modal-applied-promo');
       if (modalPromoBadge) {
-        if (activePromo && promoCodes[activePromo]) {
+        if (activePromo && discountAmount > 0) {
           modalPromoBadge.innerHTML = `
-            <div class="flex items-center justify-between p-2 rounded-lg bg-gold-50 dark:bg-gold-950/40 border border-gold-300 dark:border-gold-800 text-xs">
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-gold-50 dark:bg-gold-950/40 border border-gold-300 dark:border-gold-800 text-xs">
               <div class="flex items-center gap-1.5 text-gold-700 dark:text-gold-300 font-semibold">
                 <i data-lucide="tag" class="w-3.5 h-3.5"></i>
-                <span>Voucher <strong>${activePromo}</strong> (${promoCodes[activePromo] * 100}% Privilege Applied)</span>
+                <span>Voucher <strong>${activePromo}</strong> (${discountLabel}) • You Save <strong>${safeFormatCurrency(discountAmount)}</strong></span>
               </div>
-              <button type="button" onclick="QuickOrderController.removeModalPromo()" class="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200" aria-label="Remove voucher">
+              <button type="button" onclick="QuickOrderController.removeModalPromo()" class="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-1" aria-label="Remove voucher">
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -410,41 +435,113 @@
     applyModalPromo() {
       const input = document.getElementById('order-modal-promo-input');
       const code = input && input.value ? String(input.value).trim().toUpperCase() : '';
-      const promoCodes = window.PROMO_CODES || { LUXE20: 0.2 };
-
       if (!code) {
-        safeShowToast('Please enter a voucher code (e.g. LUXE20).', 'info');
+        safeShowToast('Please enter a voucher code (try "LUXE20").', 'info');
         return;
       }
+
+      // Optimistic update for zero-latency UI reaction
+      const promoCodes = window.PROMO_CODES || { LUXE20: 0.2 };
       if (promoCodes[code]) {
-        if (window.STATE) window.STATE.activePromo = code;
-        if (window.CartController && typeof window.CartController.save === 'function') {
-          window.CartController.save();
-        }
-        this.calculateTotals();
+        window.STATE.activePromo = code;
+        try { localStorage.setItem('kinboni_active_promo', code); } catch (e) {}
+        this.updateSummary();
         if (window.CartController && typeof window.CartController.render === 'function') {
           window.CartController.render();
         }
-        safeShowToast(`Privilege voucher "${code}" applied! ${promoCodes[code] * 100}% privilege deducted.`, 'success');
-        if (input) input.value = '';
-        safeRefreshIcons();
-      } else {
-        safeShowToast('Invalid voucher code. Try "LUXE20" for 20% privilege.', 'error');
       }
+
+      const fd = new FormData();
+      fd.append('action', 'kinboni_apply_coupon');
+      fd.append('code', code);
+      if (window.kinboni && window.kinboni.nonce) {
+        fd.append('nonce', window.kinboni.nonce);
+      }
+
+      fetch(window.kinboni.ajax_url, {
+        method: 'POST',
+        body: fd,
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.success && res.data) {
+            if (window.CartController) {
+              window.CartController.cartData = res.data;
+            }
+            window.STATE.activePromo = code;
+            if (res.data.applied_coupon_info) {
+              window.STATE.activePromoInfo = res.data.applied_coupon_info;
+            }
+            try {
+              localStorage.setItem('kinboni_active_promo', code);
+            } catch (e) {}
+
+            this.updateSummary();
+            if (window.CartController && typeof window.CartController.render === 'function') {
+              window.CartController.render();
+            }
+
+            // Notify all other components across the storefront
+            window.dispatchEvent(new CustomEvent('kinboni:promo_updated', { detail: { code: code, active: true } }));
+
+            safeShowToast(res.data.message || `Privilege voucher "${code}" applied!`, 'success');
+            if (input) input.value = '';
+            safeRefreshIcons();
+          } else {
+            const err = (res.data && res.data.message) || `Invalid voucher code. Try "LUXE20".`;
+            safeShowToast(err, 'error');
+          }
+        })
+        .catch((err) => {
+          console.error('[KINBONI QuickOrder] Voucher error:', err);
+          // Fallback offline validation
+          const promoCodes = window.PROMO_CODES || { LUXE20: 0.2 };
+          if (promoCodes[code]) {
+            window.STATE.activePromo = code;
+            try {
+              localStorage.setItem('kinboni_active_promo', code);
+            } catch (e) {}
+            this.updateSummary();
+            if (window.CartController && typeof window.CartController.render === 'function') {
+              window.CartController.render();
+            }
+            safeShowToast(`Privilege voucher "${code}" applied! ${promoCodes[code] * 100}% privilege deducted.`, 'success');
+            if (input) input.value = '';
+          } else {
+            safeShowToast('Invalid voucher code. Try "LUXE20".', 'error');
+          }
+        });
     },
 
     /**
      * Remove voucher code from checkout modal.
      */
     removeModalPromo() {
-      if (window.STATE) window.STATE.activePromo = null;
-      if (window.CartController && typeof window.CartController.save === 'function') {
-        window.CartController.save();
+      const activePromo = window.STATE?.activePromo || '';
+      window.STATE.activePromo = null;
+      window.STATE.activePromoInfo = null;
+      try {
+        localStorage.removeItem('kinboni_active_promo');
+      } catch (e) {}
+
+      if (window.CartController && typeof window.CartController.removePromo === 'function') {
+        window.CartController.removePromo(activePromo);
+      } else {
+        const fd = new FormData();
+        fd.append('action', 'kinboni_remove_coupon');
+        fd.append('code', activePromo);
+        if (window.kinboni && window.kinboni.nonce) {
+          fd.append('nonce', window.kinboni.nonce);
+        }
+        fetch(window.kinboni.ajax_url, { method: 'POST', body: fd }).catch(() => {});
       }
-      this.calculateTotals();
+
+      this.updateSummary();
       if (window.CartController && typeof window.CartController.render === 'function') {
         window.CartController.render();
       }
+
+      window.dispatchEvent(new CustomEvent('kinboni:promo_updated', { detail: { code: null, active: false } }));
       safeShowToast('Privilege voucher removed.', 'info');
       safeRefreshIcons();
     },
@@ -508,7 +605,7 @@
       if (!phone || !phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
         const err = document.getElementById('order-phone-error');
         if (err) {
-          err.textContent = 'Please provide a valid 11-digit mobile number (e.g. 017XXXXXXXX).';
+          err.textContent = 'Please provide a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX).';
           err.classList.remove('hidden');
         }
         if (phoneInput) phoneInput.classList.add('border-rose-500');
@@ -600,6 +697,17 @@
             if (confirmedTotal) confirmedTotal.textContent = data.formatted_total;
             if (receiptLink && data.order_received_url) {
               receiptLink.href = data.order_received_url;
+            }
+
+            const confirmedDiscountRow = document.getElementById('confirmed-discount-row');
+            const confirmedDiscount = document.getElementById('confirmed-order-discount');
+            if (confirmedDiscountRow && confirmedDiscount) {
+              if (data.discount && data.discount > 0) {
+                confirmedDiscountRow.classList.remove('hidden');
+                confirmedDiscount.textContent = `-${safeFormatCurrency(data.discount)}${data.promo_code ? ' (' + data.promo_code + ')' : ''}`;
+              } else {
+                confirmedDiscountRow.classList.add('hidden');
+              }
             }
 
             if (formView) formView.classList.add('hidden');

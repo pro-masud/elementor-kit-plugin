@@ -402,8 +402,8 @@ class Widget_Header extends \Elementor\Widget_Base {
 		?>
 
 		<header id="site-header" class="<?php echo esc_attr( $header_classes ); ?>">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<div class="flex items-center justify-between h-[72px] gap-4 sm:gap-6">
+			<div class="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
+			<div class="flex items-center justify-between h-[72px] gap-2 sm:gap-6">
 				
 				<!-- Mobile Menu Hamburger Button -->
 				<div class="flex items-center lg:hidden">
@@ -418,18 +418,18 @@ class Widget_Header extends \Elementor\Widget_Base {
 						<img src="<?php echo esc_url( $logo_img_url ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" class="kb-logo-img object-contain transition-transform group-hover:scale-105" />
 					</a>
 				<?php else : ?>
-					<a href="<?php echo esc_url( $logo_url ); ?>"<?php echo $logo_target; ?> class="group flex items-center gap-2 sm:gap-3 flex-shrink-0" aria-label="<?php echo esc_attr( $logo_title ); ?>">
+					<a href="<?php echo esc_url( $logo_url ); ?>"<?php echo $logo_target; ?> class="group flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink" aria-label="<?php echo esc_attr( $logo_title ); ?>">
 						<?php if ( ! empty( $logo_monogram ) ) : ?>
 							<span class="kb-logo-monogram hidden sm:grid place-items-center w-10 h-10 rounded-full bg-stone-900 dark:bg-gold-400 text-gold-300 dark:text-stone-950 font-serif text-xl font-semibold shadow-sm transition-transform group-hover:scale-105">
 								<?php echo $logo_monogram; ?>
 							</span>
 						<?php endif; ?>
-						<span class="flex flex-col leading-none">
-							<span class="kb-logo-title font-serif text-xl sm:text-[26px] font-semibold tracking-[0.2em] sm:tracking-[0.22em] text-stone-900 dark:text-white group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
+						<span class="flex flex-col leading-none min-w-0">
+							<span class="kb-logo-title font-serif text-lg sm:text-[26px] font-semibold tracking-[0.16em] sm:tracking-[0.22em] text-stone-900 dark:text-white group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors truncate">
 								<?php echo $logo_title; ?>
 							</span>
 							<?php if ( ! empty( $logo_subtitle ) ) : ?>
-								<span class="kb-logo-subtitle text-[8px] sm:text-[9px] tracking-[0.35em] sm:tracking-[0.4em] text-gold-600 dark:text-gold-400 font-semibold mt-0.5 sm:mt-1">
+								<span class="kb-logo-subtitle text-[8px] sm:text-[9px] tracking-[0.3em] sm:tracking-[0.4em] text-gold-600 dark:text-gold-400 font-semibold mt-0.5 sm:mt-1 truncate">
 									<?php echo $logo_subtitle; ?>
 								</span>
 							<?php endif; ?>

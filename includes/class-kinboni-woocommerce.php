@@ -660,6 +660,9 @@ class Kinboni_WooCommerce {
 
 		$promos = [
 			'LUXE20'    => 20,
+			'ATELIER15' => 15,
+			'ROYAL10'   => 10,
+			'VIP25'     => 25,
 			'KINBONI10' => 10,
 			'WELCOME'   => 15,
 		];
@@ -992,33 +995,81 @@ class Kinboni_WooCommerce {
 
 		self::ensure_atelier_coupon_exists( $clean_code );
 
-		$cart = WC()->cart;
-		if ( ! $cart ) {
-			throw new \Exception( __( 'WooCommerce cart unavailable.', 'kinboni-pro' ) );
-		}
-
-		if ( $cart->has_discount( $clean_code ) ) {
-			throw new \Exception( sprintf( __( 'Coupon "%s" has already been applied.', 'kinboni-pro' ), $clean_code ) );
-		}
-
-		$result = $cart->apply_coupon( $clean_code );
-		if ( ! $result && ! $cart->has_discount( $clean_code ) ) {
-			$notices = function_exists( 'wc_get_notices' ) ? wc_get_notices( 'error' ) : [];
-			$err_msg = ! empty( $notices ) ? wp_strip_all_tags( $notices[0]['notice'] ?? '' ) : sprintf( __( 'Coupon "%s" is invalid.', 'kinboni-pro' ), $clean_code );
-			if ( function_exists( 'wc_clear_notices' ) ) {
-				wc_clear_notices();
+		$coupon_id  = function_exists( 'wc_get_coupon_id_by_code' ) ? wc_get_coupon_id_by_code( $clean_code ) : 0;
+		$coupon_obj = null;
+		if ( $coupon_id ) {
+			$coupon_obj = new \WC_Coupon( $clean_code );
+			if ( ! $coupon_obj->is_valid() ) {
+				throw new \Exception( sprintf( __( 'Coupon "%s" is not valid.', 'kinboni-pro' ), $clean_code ) );
 			}
-			throw new \Exception( $err_msg );
+		} else {
+			// Check built-in fallback
+			$atelier_promos = [
+				'LUXE20'    => 0.20,
+				'ATELIER15' => 0.15,
+				'ROYAL10'   => 0.10,
+				'VIP25'     => 0.25,
+				'KINBONI10' => 0.10,
+				'WELCOME'   => 0.15,
+			];
+			if ( ! isset( $atelier_promos[ $clean_code ] ) ) {
+				throw new \Exception( sprintf( __( 'Coupon "%s" does not exist.', 'kinboni-pro' ), $clean_code ) );
+			}
 		}
 
-		if ( function_exists( 'wc_clear_notices' ) ) {
-			wc_clear_notices();
+		$cart = WC()->cart;
+		if ( $cart && ! $cart->is_empty() ) {
+			if ( ! $cart->has_discount( $clean_code ) ) {
+				$result = $cart->apply_coupon( $clean_code );
+				if ( ! $result && ! $cart->has_discount( $clean_code ) ) {
+					$notices = function_exists( 'wc_get_notices' ) ? wc_get_notices( 'error' ) : [];
+					$err_msg = ! empty( $notices ) ? wp_strip_all_tags( $notices[0]['notice'] ?? '' ) : sprintf( __( 'Coupon "%s" is invalid.', 'kinboni-pro' ), $clean_code );
+					if ( function_exists( 'wc_clear_notices' ) ) {
+						wc_clear_notices();
+					}
+					throw new \Exception( $err_msg );
+				}
+				if ( function_exists( 'wc_clear_notices' ) ) {
+					wc_clear_notices();
+				}
+				$cart->calculate_totals();
+			}
 		}
 
-		$cart->calculate_totals();
+		$payload = self::get_cart_payload();
 
-		$payload            = self::get_cart_payload();
-		$payload['message'] = sprintf( __( 'Promo code "%s" applied successfully!', 'kinboni-pro' ), $clean_code );
+		$discount_rate   = 0.20;
+		$discount_amount = 0.0;
+		$discount_type   = 'percent';
+
+		if ( $coupon_obj ) {
+			$discount_type = $coupon_obj->get_discount_type();
+			if ( 'percent' === $discount_type ) {
+				$discount_rate = (float) $coupon_obj->get_amount() / 100;
+			} else {
+				$discount_amount = (float) $coupon_obj->get_amount();
+				$discount_rate   = 0.0;
+			}
+		} else {
+			$atelier_promos = [
+				'LUXE20'    => 0.20,
+				'ATELIER15' => 0.15,
+				'ROYAL10'   => 0.10,
+				'VIP25'     => 0.25,
+				'KINBONI10' => 0.10,
+				'WELCOME'   => 0.15,
+			];
+			$discount_rate = $atelier_promos[ $clean_code ] ?? 0.20;
+		}
+
+		$payload['applied_coupon_info'] = [
+			'code'         => $clean_code,
+			'type'         => $discount_type,
+			'amount'       => $coupon_obj ? (float) $coupon_obj->get_amount() : ( $discount_rate * 100 ),
+			'rate'         => $discount_rate,
+			'fixed_amount' => $discount_amount,
+		];
+		$payload['message'] = sprintf( __( 'Privilege voucher "%s" applied successfully!', 'kinboni-pro' ), $clean_code );
 
 		return $payload;
 	}
@@ -1090,16 +1141,17 @@ class Kinboni_WooCommerce {
 	}
 
 	/**
-	 * Format price with currency symbol.
+	 * Format price with currency symbol (clean tag-free string safe for UI & JSON).
 	 *
 	 * @param float $amount Price amount.
 	 * @return string Formatted price.
 	 */
 	public static function format_price( float $amount ): string {
 		if ( function_exists( 'wc_price' ) ) {
-			return wc_price( $amount );
+			return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
 		}
-		return '৳' . number_format( $amount, 0 );
+		$sym = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '৳';
+		return $sym . number_format( $amount, 0 );
 	}
 
 	/**
@@ -1127,9 +1179,11 @@ class Kinboni_WooCommerce {
 
 		// BD phone validation (e.g. 017XXXXXXXX, +88017XXXXXXXX, 88017XXXXXXXX)
 		$clean_phone = preg_replace( '/[\s\-]/', '', $customer_phone );
-		if ( ! preg_match( '/^(?:\+88|88)?01[3-9]\d{8}$/', $clean_phone ) ) {
-			throw new \Exception( __( 'Please provide a valid 11-digit mobile number (e.g., 017XXXXXXXX).', 'kinboni-pro' ) );
+		if ( ! preg_match( '/^(?:\+88|88)?(01[3-9]\d{8})$/', $clean_phone, $matches ) ) {
+			throw new \Exception( __( 'Please provide a valid 11-digit Bangladeshi mobile number (e.g., 017XXXXXXXX).', 'kinboni-pro' ) );
 		}
+		// Normalize to standard BD 11-digit format 01XXXXXXXXX
+		$customer_phone = $matches[1];
 
 		if ( mb_strlen( $customer_address ) < 5 ) {
 			throw new \Exception( __( 'Please provide your full delivery address (House, Road, Area, District).', 'kinboni-pro' ) );
@@ -1319,6 +1373,14 @@ class Kinboni_WooCommerce {
 		$order->set_address( $address_fields, 'billing' );
 		$order->set_address( $address_fields, 'shipping' );
 
+		if ( is_user_logged_in() ) {
+			$current_user = wp_get_current_user();
+			$order->set_customer_id( $current_user->ID );
+			if ( ! empty( $current_user->user_email ) ) {
+				$order->set_billing_email( $current_user->user_email );
+			}
+		}
+
 		// 10. Payment Method: Cash on Delivery
 		$order->set_payment_method( 'cod' );
 		$order->set_payment_method_title( __( 'Cash on Delivery', 'kinboni-pro' ) );
@@ -1380,6 +1442,8 @@ class Kinboni_WooCommerce {
 			'subtotal'           => $order_subtotal,
 			'delivery_fee'       => $delivery_fee,
 			'discount'           => $discount_amount,
+			'formatted_discount' => self::format_price( $discount_amount ),
+			'promo_code'         => $applied_coupon,
 			'total'              => $final_total,
 			'formatted_total'    => $plain_total_str,
 			'message'            => sprintf( __( 'Order #%s placed successfully! Thank you for choosing Kinboni.', 'kinboni-pro' ), $order->get_order_number() ),

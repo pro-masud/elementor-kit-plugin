@@ -22,6 +22,36 @@ jQuery(document).ready(function($) {
 		$toast.fadeIn(250).delay(3000).fadeOut(300);
 	}
 
+	// ── Dark & Light Mode Switcher ──
+	const THEME_STORAGE_KEY = 'kinboni_admin_dashboard_theme';
+	function applyAdminTheme(theme) {
+		if (theme === 'light') {
+			$('body').addClass('kb-admin-light-mode');
+			$('.kinboni-admin-wrap').addClass('kb-light-theme');
+			$('.kb-moon-icon').hide();
+			$('.kb-sun-icon').show();
+			$('.kb-theme-label').text('Light Mode');
+		} else {
+			$('body').removeClass('kb-admin-light-mode');
+			$('.kinboni-admin-wrap').removeClass('kb-light-theme');
+			$('.kb-moon-icon').show();
+			$('.kb-sun-icon').hide();
+			$('.kb-theme-label').text('Dark Mode');
+		}
+	}
+
+	const savedAdminTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+	applyAdminTheme(savedAdminTheme);
+
+	$(document).on('click', '#kb-theme-toggle-btn', function(e) {
+		e.preventDefault();
+		const currentTheme = $('body').hasClass('kb-admin-light-mode') ? 'light' : 'dark';
+		const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+		applyAdminTheme(newTheme);
+		localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+		showToast(newTheme === 'light' ? 'Light mode activated' : 'Dark mode activated');
+	});
+
 	// Tabs Switcher with URL hash preservation
 	$('.kb-tab-btn').on('click', function() {
 		const tab = $(this).data('tab');

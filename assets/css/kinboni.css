@@ -306,6 +306,27 @@
    ═══════════════════════════════════════ */
 body.kb-modal-open { overflow: hidden; }
 
+/* ═══════════════════════════════════════
+   CONTAINER MAX WIDTH (1440px DESKTOP) & ROOT OVERFLOW GUARD
+   ═══════════════════════════════════════ */
+.max-w-\[1440px\],
+.max-w-7xl,
+.kb-container {
+  max-width: 1440px !important;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+@supports not (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .kb-modal__media { flex: 0 0 100%; min-height: 200px; }
@@ -368,6 +389,55 @@ body.kb-modal-open { overflow: hidden; }
 .kb-nav-link {
   display: inline-block;
   cursor: pointer;
+}
+
+/* ═══════════════════════════════════════
+   8. ARBITRARY UTILITY FALLBACKS
+   ═══════════════════════════════════════ */
+.aspect-\[4\/5\] { aspect-ratio: 4 / 5; }
+.aspect-\[3\/4\] { aspect-ratio: 3 / 4; }
+.aspect-\[4\/3\] { aspect-ratio: 4 / 3; }
+.aspect-\[1\/1\] { aspect-ratio: 1 / 1; }
+.aspect-\[16\/9\] { aspect-ratio: 16 / 9; }
+
+.max-h-\[92vh\] { max-height: 92vh; }
+.max-h-\[85vh\] { max-height: 85vh; }
+.rounded-t-\[999px\] { border-top-left-radius: 999px; border-top-right-radius: 999px; }
+
+.tracking-\[0\.15em\] { letter-spacing: 0.15em; }
+.tracking-\[0\.16em\] { letter-spacing: 0.16em; }
+.tracking-\[0\.2em\]  { letter-spacing: 0.2em; }
+.tracking-\[0\.22em\] { letter-spacing: 0.22em; }
+.tracking-\[0\.25em\] { letter-spacing: 0.25em; }
+.tracking-\[0\.3em\]  { letter-spacing: 0.3em; }
+.tracking-\[0\.35em\] { letter-spacing: 0.35em; }
+.tracking-\[0\.4em\]  { letter-spacing: 0.4em; }
+
+.shadow-luxury {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+}
+.shadow-luxury-dark {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode token overrides */
+.dark .kb-card {
+  background: #141318;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.dark .kb-card__image-wrap {
+  background: #0e0d12;
+}
+.dark .kb-modal__panel {
+  background: #141318;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.dark .kb-modal__title {
+  color: #ffffff;
+}
+.dark .kb-modal__text {
+  color: #a8a29e;
 }
 
 

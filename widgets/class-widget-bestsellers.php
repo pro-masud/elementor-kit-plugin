@@ -291,7 +291,7 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 		?>
 
 		<section id="bestsellers" class="kb-bestsellers-section py-16 sm:py-24 scroll-mt-24">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 
 				<!-- Section Header -->
 				<div class="text-center max-w-2xl mx-auto mb-10">
@@ -338,7 +338,7 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 				<?php endif; ?>
 
 				<!-- Best Sellers Dynamic Grid -->
-				<div id="bestsellers-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 <?php echo esc_attr( $col_class ); ?> gap-6 sm:gap-8">
+				<div id="bestsellers-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 <?php echo esc_attr( $col_class ); ?> gap-6 sm:gap-8">
 					<?php
 					if ( 'wc' === $source && function_exists( 'wc_get_products' ) ) {
 						$wc_limit = ! empty( $s['wc_limit'] ) ? absint( $s['wc_limit'] ) : 8;

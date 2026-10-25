@@ -387,7 +387,7 @@ class Widget_Testimonials extends \Elementor\Widget_Base {
 		?>
 
 		<section id="testimonials" class="kb-testimonials-section py-16 sm:py-24 scroll-mt-24 overflow-hidden">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 
 				<!-- Section Header with Swiper Navigation Arrows -->
 				<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 sm:mb-14 gap-6">

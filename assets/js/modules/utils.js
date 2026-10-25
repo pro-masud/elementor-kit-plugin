@@ -28,24 +28,33 @@
   // 2. Promotional Voucher Privileges
   const PROMO_CODES = {
     LUXE20: 0.20,
+    ATELIER15: 0.15,
+    ROYAL10: 0.10,
+    VIP25: 0.25,
     KINBONI10: 0.10,
     WELCOME: 0.15,
   };
 
   const FREE_SHIPPING_THRESHOLD = 2500;
 
+  let cachedPromo = null;
+  try {
+    cachedPromo = localStorage.getItem('kinboni_active_promo') || localStorage.getItem(STORAGE_KEYS.PROMO);
+  } catch (e) {}
+
   // 3. Centralized Application State
   const STATE = window.STATE = Object.assign(window.STATE || {}, {
     cart: (window.STATE && Array.isArray(window.STATE.cart) && window.STATE.cart.length > 0) ? window.STATE.cart : [],
     wishlist: (window.STATE && Array.isArray(window.STATE.wishlist)) ? window.STATE.wishlist : [],
-    activePromo: (window.STATE && window.STATE.activePromo) ? window.STATE.activePromo : null,
+    activePromo: (window.STATE && window.STATE.activePromo) ? window.STATE.activePromo : (cachedPromo || null),
+    activePromoInfo: (window.STATE && window.STATE.activePromoInfo) ? window.STATE.activePromoInfo : null,
     activeFilter: 'all',
     quickViewProduct: null,
   });
 
   // 4. Currency Formatting
   function formatCurrency(amount) {
-    const symbol = (window.kinboni && window.kinboni.currency_symbol) || '৳';
+    const symbol = (window.kinboni && (window.kinboni.currency || window.kinboni.currency_symbol)) || '৳';
     const num = Number(amount) || 0;
     return symbol + num.toLocaleString('en-US');
   }
@@ -108,17 +117,29 @@
 
   // 7. Voucher Clipboard Copy Helper
   function copyPromoCode(code = 'LUXE20') {
+    const cleanCode = (code || 'LUXE20').trim().toUpperCase();
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
       navigator.clipboard
-        .writeText(code)
+        .writeText(cleanCode)
         .then(() => {
-          showToast(`Privilege code "${code}" copied to clipboard!`, 'success');
+          showToast(`Privilege code "${cleanCode}" copied & applied!`, 'success');
         })
         .catch(() => {
-          showToast(`Code: ${code} - Enter at checkout`, 'info');
+          showToast(`Code: ${cleanCode} - Privilege activated!`, 'info');
         });
     } else {
-      showToast(`Code: ${code} - Enter at checkout`, 'info');
+      showToast(`Code: ${cleanCode} - Privilege activated!`, 'info');
+    }
+
+    // Auto-apply promo code everywhere across the site
+    if (window.CartController && typeof window.CartController.applyPromo === 'function') {
+      window.CartController.applyPromo(cleanCode);
+    } else if (window.QuickOrderController && typeof window.QuickOrderController.applyModalPromo === 'function') {
+      window.STATE.activePromo = cleanCode;
+      try { localStorage.setItem('kinboni_active_promo', cleanCode); } catch(e) {}
+      if (typeof window.QuickOrderController.updateSummary === 'function') {
+        window.QuickOrderController.updateSummary();
+      }
     }
   }
 

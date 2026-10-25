@@ -38,7 +38,7 @@
 
   // 2. Backward-Compatible Utilities
   const formatCurrency = Utils.formatCurrency || window.formatCurrency || function(amount) {
-    const symbol = (window.kinboni && window.kinboni.currency_symbol) || '৳';
+    const symbol = (window.kinboni && (window.kinboni.currency || window.kinboni.currency_symbol)) || '৳';
     return symbol + Number(amount || 0).toLocaleString('en-US');
   };
 

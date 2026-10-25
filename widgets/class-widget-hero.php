@@ -762,7 +762,7 @@ class Widget_Hero extends \Elementor\Widget_Base {
 				<div class="absolute -top-32 right-1/4 w-96 h-96 bg-gold-400/10 rounded-full blur-3xl pointer-events-none"></div>
 			<?php endif; ?>
 
-			<div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-16 lg:pb-20">
+			<div class="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-16 lg:pb-20">
 				<div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
 
 					<!-- Left Column: Editorial Headline & Actions -->
@@ -884,18 +884,18 @@ class Widget_Hero extends \Elementor\Widget_Base {
 									type="button"
 									data-product="<?php echo esc_attr( $p2_json ); ?>"
 									onclick="event.stopPropagation(); if(window.QuickViewController) QuickViewController.openProduct(this);" 
-									class="absolute inset-x-2 bottom-2 rounded-xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md px-2.5 py-1.5 sm:px-3 sm:py-2 text-left hover:bg-gold-400 dark:hover:bg-gold-400 group/btn transition-all shadow-sm border border-stone-200/50 dark:border-stone-800/50 flex items-center justify-between gap-1.5"
+									class="absolute inset-x-1.5 sm:inset-x-2 bottom-1.5 sm:bottom-2 rounded-xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-2 text-left hover:bg-gold-400 dark:hover:bg-gold-400 group/btn transition-all shadow-sm border border-stone-200/50 dark:border-stone-800/50 flex items-center justify-between gap-1 sm:gap-1.5"
 									title="<?php echo esc_attr( sprintf( __( 'Quick view %s', 'kinboni-pro' ), $p2['name'] ) ); ?>"
 								>
-									<div class="min-w-0">
-										<span class="block text-[9px] sm:text-[10px] font-bold text-gold-700 dark:text-gold-400 group-hover/btn:text-stone-950 transition-colors uppercase tracking-wider">
+									<div class="min-w-0 flex-1">
+										<span class="block text-[8px] sm:text-[10px] font-bold text-gold-700 dark:text-gold-400 group-hover/btn:text-stone-950 transition-colors uppercase tracking-wider truncate">
 											<?php echo esc_html( $p2['badge'] ); ?> &bull; <?php echo esc_html( $p2['price_display'] ); ?>
 										</span>
-										<span class="block font-serif text-xs sm:text-sm font-semibold text-stone-900 dark:text-white group-hover/btn:text-stone-950 truncate transition-colors">
+										<span class="block font-serif text-[11px] sm:text-xs md:text-sm font-semibold text-stone-900 dark:text-white group-hover/btn:text-stone-950 truncate transition-colors leading-tight">
 											<?php echo esc_html( $p2['name'] ); ?>
 										</span>
 									</div>
-									<div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-100 dark:bg-stone-800 group-hover/btn:bg-stone-950 group-hover/btn:text-white flex items-center justify-center flex-shrink-0 transition-colors">
+									<div class="hidden xs:flex w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-100 dark:bg-stone-800 group-hover/btn:bg-stone-950 group-hover/btn:text-white items-center justify-center flex-shrink-0 transition-colors">
 										<i data-lucide="arrow-up-right" class="w-3 h-3"></i>
 									</div>
 								</button>
@@ -919,18 +919,18 @@ class Widget_Hero extends \Elementor\Widget_Base {
 									type="button"
 									data-product="<?php echo esc_attr( $p3_json ); ?>"
 									onclick="event.stopPropagation(); if(window.QuickViewController) QuickViewController.openProduct(this);" 
-									class="absolute inset-x-2 bottom-2 rounded-xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md px-2.5 py-1.5 sm:px-3 sm:py-2 text-left hover:bg-gold-400 dark:hover:bg-gold-400 group/btn transition-all shadow-sm border border-stone-200/50 dark:border-stone-800/50 flex items-center justify-between gap-1.5"
+									class="absolute inset-x-1.5 sm:inset-x-2 bottom-1.5 sm:bottom-2 rounded-xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-2 text-left hover:bg-gold-400 dark:hover:bg-gold-400 group/btn transition-all shadow-sm border border-stone-200/50 dark:border-stone-800/50 flex items-center justify-between gap-1 sm:gap-1.5"
 									title="<?php echo esc_attr( sprintf( __( 'Quick view %s', 'kinboni-pro' ), $p3['name'] ) ); ?>"
 								>
-									<div class="min-w-0">
-										<span class="block text-[9px] sm:text-[10px] font-bold text-gold-700 dark:text-gold-400 group-hover/btn:text-stone-950 transition-colors uppercase tracking-wider">
+									<div class="min-w-0 flex-1">
+										<span class="block text-[8px] sm:text-[10px] font-bold text-gold-700 dark:text-gold-400 group-hover/btn:text-stone-950 transition-colors uppercase tracking-wider truncate">
 											<?php echo esc_html( $p3['badge'] ); ?> &bull; <?php echo esc_html( $p3['price_display'] ); ?>
 										</span>
-										<span class="block font-serif text-xs sm:text-sm font-semibold text-stone-900 dark:text-white group-hover/btn:text-stone-950 truncate transition-colors">
+										<span class="block font-serif text-[11px] sm:text-xs md:text-sm font-semibold text-stone-900 dark:text-white group-hover/btn:text-stone-950 truncate transition-colors leading-tight">
 											<?php echo esc_html( $p3['name'] ); ?>
 										</span>
 									</div>
-									<div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-100 dark:bg-stone-800 group-hover/btn:bg-stone-950 group-hover/btn:text-white flex items-center justify-center flex-shrink-0 transition-colors">
+									<div class="hidden xs:flex w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-100 dark:bg-stone-800 group-hover/btn:bg-stone-950 group-hover/btn:text-white items-center justify-center flex-shrink-0 transition-colors">
 										<i data-lucide="arrow-up-right" class="w-3 h-3"></i>
 									</div>
 								</button>
@@ -945,7 +945,7 @@ class Widget_Hero extends \Elementor\Widget_Base {
 			<!-- Trust Ribbon Under Hero -->
 			<?php if ( 'yes' === $settings['show_trust_ribbon'] ) : ?>
 				<div class="border-y border-stone-200 dark:border-stone-800 bg-white/70 dark:bg-stone-950/70 backdrop-blur-sm">
-					<ul class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs sm:text-sm font-medium text-stone-700 dark:text-stone-300">
+					<ul class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-4 grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs sm:text-sm font-medium text-stone-700 dark:text-stone-300">
 						<?php if ( ! empty( $settings['trust_1_text'] ) ) : ?>
 							<li class="flex items-center gap-2.5">
 								<i data-lucide="<?php echo esc_attr( $settings['trust_1_icon'] ?: 'truck' ); ?>" class="w-5 h-5 text-gold-600 dark:text-gold-400 flex-shrink-0"></i>

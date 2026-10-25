@@ -713,6 +713,11 @@ class Kinboni_Products {
 
 			// Attach images if not already attached
 			if ( ! $product->get_image_id() && ! empty( $item['image'] ) ) {
+				if ( ! function_exists( 'media_sideload_image' ) ) {
+					require_once ABSPATH . 'wp-admin/includes/media.php';
+					require_once ABSPATH . 'wp-admin/includes/file.php';
+					require_once ABSPATH . 'wp-admin/includes/image.php';
+				}
 				// Sideload or attach image
 				$att_id = media_sideload_image( $item['image'], $saved_id, $item['name'], 'id' );
 				if ( ! is_wp_error( $att_id ) && $att_id ) {

@@ -287,14 +287,14 @@
       let galleryThumbsHtml = '';
       if (gallery.length > 1) {
         galleryThumbsHtml = `
-          <div class="flex items-center justify-center gap-3 pt-1">
+          <div class="flex items-center justify-start sm:justify-center gap-2.5 pt-1 overflow-x-auto pb-1 max-w-full">
             ${gallery.map((imgUrl, idx) => `
               <button 
                 type="button" 
                 data-thumb-index="${idx}"
                 data-img-url="${imgUrl}"
                 onclick="QuickViewController.switchImage(${idx}, this.dataset.imgUrl)"
-                class="quickview-thumb-btn w-14 h-14 rounded-xl border-2 ${idx === 0 ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-transparent opacity-60 hover:opacity-100'} overflow-hidden shadow-sm transition-all active:scale-95 cursor-pointer bg-stone-100 dark:bg-stone-900"
+                class="quickview-thumb-btn w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl border-2 ${idx === 0 ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-transparent opacity-60 hover:opacity-100'} overflow-hidden shadow-sm transition-all active:scale-95 cursor-pointer bg-stone-100 dark:bg-stone-900"
                 aria-label="${escapeHtml(product.name)} angle ${idx + 1}"
               >
                 <img src="${imgUrl}" alt="${escapeHtml(product.name)} angle ${idx + 1}" class="w-full h-full object-cover" />
@@ -345,6 +345,13 @@
                 </span>
               ` : ''}
             </div>
+
+            ${(window.STATE && window.STATE.activePromo) ? `
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold-950/60 border border-gold-300 dark:border-gold-800 text-xs font-semibold text-gold-700 dark:text-gold-300 mb-4">
+                <i data-lucide="tag" class="w-3.5 h-3.5 text-gold-500"></i>
+                <span>Privilege Voucher <strong>${window.STATE.activePromo}</strong> Active — extra savings applied at checkout</span>
+              </div>
+            ` : ''}
 
             <p class="text-sm text-stone-600 dark:text-stone-300 leading-relaxed mb-6 font-light">
               ${description}
@@ -411,7 +418,7 @@
                   class="w-full py-3.5 px-4 rounded-xl bg-gold-400 hover:bg-gold-500 text-stone-950 font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-gold-500/25 transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
                   <i data-lucide="zap" class="w-4 h-4 fill-stone-950"></i>
-                  <span>Direct Order (COD)</span>
+                  <span>Direct Order</span>
                 </button>
                 <button 
                   type="button" 
@@ -425,7 +432,7 @@
             </div>
 
             <!-- Trust Badges -->
-            <div class="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-[11px] text-stone-500 dark:text-stone-400">
+            <div class="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-500 dark:text-stone-400">
               <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-gold-500"></i> Certified Authentic</span>
               <span class="flex items-center gap-1.5"><i data-lucide="truck" class="w-3.5 h-3.5 text-gold-500"></i> White-Glove Dispatch</span>
               <span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-gold-500"></i> 7-Day Exchange</span>

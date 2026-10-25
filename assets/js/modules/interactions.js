@@ -96,6 +96,28 @@
       const mobileMenuBtn = document.getElementById('mobile-menu-btn');
       const closeMobileMenuBtn = document.getElementById('close-mobile-menu-btn');
       const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+      const mobileLinksContainer = document.getElementById('mobile-drawer-links');
+
+      // Dynamic Sync: Mirror desktop header navigation links into mobile drawer if available
+      const desktopNav = document.querySelector('#site-header nav');
+      if (desktopNav && mobileLinksContainer) {
+        const desktopLinks = desktopNav.querySelectorAll('a.kb-nav-link');
+        if (desktopLinks && desktopLinks.length > 0) {
+          mobileLinksContainer.innerHTML = '';
+          desktopLinks.forEach((dLink) => {
+            const mLink = document.createElement('a');
+            mLink.href = dLink.getAttribute('href') || '#';
+            if (dLink.getAttribute('target')) {
+              mLink.target = dLink.getAttribute('target');
+              mLink.rel = dLink.getAttribute('rel') || 'noopener noreferrer';
+            }
+            mLink.className = 'mobile-nav-link block font-serif text-lg font-medium text-stone-900 dark:text-stone-100 hover:text-gold-600 transition-colors';
+            mLink.textContent = dLink.textContent.trim();
+            mLink.addEventListener('click', () => this.closeMobileMenu());
+            mobileLinksContainer.appendChild(mLink);
+          });
+        }
+      }
 
       if (mobileMenuBtn) {
         mobileMenuBtn.onclick = (e) => {
@@ -125,31 +147,6 @@
           this.closeMobileMenu();
         }
       });
-    },
-
-    /**
-     * Initialize top announcement bar dismissal & session persistence.
-     */
-    initAnnouncementBar() {
-      const dismissBtn = document.getElementById('dismiss-announcement-btn');
-      const announcementBar = document.getElementById('announcement-bar');
-      if (!announcementBar) return;
-
-      try {
-        if (sessionStorage.getItem(STORAGE_KEYS.ANNOUNCEMENT) === 'true') {
-          announcementBar.classList.add('hidden');
-        }
-      } catch (e) {}
-
-      if (dismissBtn) {
-        dismissBtn.addEventListener('click', () => {
-          announcementBar.classList.add('h-0', 'opacity-0', 'overflow-hidden', 'py-0');
-          setTimeout(() => announcementBar.classList.add('hidden'), 300);
-          try {
-            sessionStorage.setItem(STORAGE_KEYS.ANNOUNCEMENT, 'true');
-          } catch (e) {}
-        });
-      }
     },
 
     /**
@@ -319,7 +316,6 @@
      */
     init() {
       this.initMobileMenu();
-      this.initAnnouncementBar();
       this.initStickyHeader();
       this.initNewsletter();
       this.initCatalogShortcuts();

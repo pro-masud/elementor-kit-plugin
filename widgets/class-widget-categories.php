@@ -495,7 +495,7 @@ class Widget_Categories extends \Elementor\Widget_Base {
 		?>
 
 		<section id="<?php echo $section_id; ?>" class="kb-categories-section py-16 sm:py-24 bg-stone-100/60 dark:bg-stone-950/60 border-t border-b border-stone-200/70 dark:border-stone-800/80 scroll-mt-24">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 				
 				<!-- Section Header -->
 				<div class="text-center max-w-2xl mx-auto mb-12 sm:mb-16">

@@ -577,7 +577,7 @@ class Widget_Footer extends \Elementor\Widget_Base {
 		?>
 
 		<footer class="kb-footer bg-stone-950 text-stone-400 border-t-2 border-gold-500/70">
-			<div class="kb-footer-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+			<div class="kb-footer-inner max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-stone-800">
 					
 					<!-- Column 1: Brand Atelier & Social Profiles -->
