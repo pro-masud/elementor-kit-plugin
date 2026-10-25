@@ -277,7 +277,8 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 
 		$widget_id = $this->get_id();
 		$tabs      = $s['filter_tabs'] ?? [];
-		$source    = $s['catalog_source'] ?? 'demo';
+		$has_published_wc = function_exists( 'wc_get_products' ) && ! empty( wc_get_products( [ 'limit' => 1, 'status' => 'publish' ] ) );
+		$source           = ( ! empty( $s['catalog_source'] ) ) ? $s['catalog_source'] : ( $has_published_wc ? 'wc' : 'demo' );
 
 		// Grid columns class
 		$cols = $s['grid_columns'] ?? '4';

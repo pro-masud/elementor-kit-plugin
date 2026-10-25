@@ -279,7 +279,8 @@ class Widget_Featured extends \Elementor\Widget_Base {
 		$s = $this->get_settings_for_display();
 
 		$section_id = ! empty( $s['section_id'] ) ? esc_attr( $s['section_id'] ) : 'featured';
-		$source     = $s['catalog_source'] ?? 'demo';
+		$has_published_wc = function_exists( 'wc_get_products' ) && ! empty( wc_get_products( [ 'limit' => 1, 'status' => 'publish' ] ) );
+		$source           = ( ! empty( $s['catalog_source'] ) ) ? $s['catalog_source'] : ( $has_published_wc ? 'wc' : 'demo' );
 		$widget_id  = $this->get_id();
 
 		// Grid columns class
@@ -540,42 +541,42 @@ class Widget_Featured extends \Elementor\Widget_Base {
 						// Fallback Server-Side Demo Output (Pre-Hydrated for 0ms SEO & Instant Visual Load)
 						$demo_featured = [
 							[
-								'id' => 1, 'name' => 'Chronos Royale Automatic', 'cat' => 'Timepieces', 'price' => '৳18,500', 'orig' => '৳22,000', 'badge' => 'BESTSELLER',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-01' ) ) ) ? $m_id : 1, 'name' => 'Chronos Royale Automatic', 'cat' => 'Timepieces', 'price' => '৳18,500', 'orig' => '৳22,000', 'badge' => 'BESTSELLER',
 								'img' => 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 2, 'name' => 'Atelier Saddle Leather Briefcase', 'cat' => 'Leather Goods', 'price' => '৳14,200', 'orig' => '৳16,800', 'badge' => 'NEW',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-02' ) ) ) ? $m_id : 2, 'name' => 'Atelier Saddle Leather Briefcase', 'cat' => 'Leather Goods', 'price' => '৳14,200', 'orig' => '৳16,800', 'badge' => 'NEW',
 								'img' => 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 3, 'name' => 'Nocturne Oud Extrait De Parfum', 'cat' => 'Fine Fragrance', 'price' => '৳8,900', 'orig' => null, 'badge' => 'SIGNATURE',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-03' ) ) ) ? $m_id : 3, 'name' => 'Nocturne Oud Extrait De Parfum', 'cat' => 'Fine Fragrance', 'price' => '৳8,900', 'orig' => null, 'badge' => 'SIGNATURE',
 								'img' => 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 4, 'name' => 'Aethelgard 18K Minimalist Cuff', 'cat' => 'Fine Jewelry', 'price' => '৳6,400', 'orig' => '৳7,500', 'badge' => 'LIMITED',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-04' ) ) ) ? $m_id : 4, 'name' => 'Aethelgard 18K Minimalist Cuff', 'cat' => 'Fine Jewelry', 'price' => '৳6,400', 'orig' => '৳7,500', 'badge' => 'LIMITED',
 								'img' => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 5, 'name' => 'Monaco Polarized Acetate Shades', 'cat' => 'Eyewear', 'price' => '৳5,200', 'orig' => null, 'badge' => null,
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-05' ) ) ) ? $m_id : 5, 'name' => 'Monaco Polarized Acetate Shades', 'cat' => 'Eyewear', 'price' => '৳5,200', 'orig' => null, 'badge' => null,
 								'img' => 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 6, 'name' => 'Kyoto Mulberry Silk Foulard', 'cat' => 'Silk & Cashmere', 'price' => '৳4,800', 'orig' => '৳5,600', 'badge' => 'ARTISANAL',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-06' ) ) ) ? $m_id : 6, 'name' => 'Kyoto Mulberry Silk Foulard', 'cat' => 'Silk & Cashmere', 'price' => '৳4,800', 'orig' => '৳5,600', 'badge' => 'ARTISANAL',
 								'img' => 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 7, 'name' => 'Heritage Bi-Fold Card Wallet', 'cat' => 'Leather Goods', 'price' => '৳3,200', 'orig' => '৳3,900', 'badge' => 'BESTSELLER',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-07' ) ) ) ? $m_id : 7, 'name' => 'Heritage Bi-Fold Card Wallet', 'cat' => 'Leather Goods', 'price' => '৳3,200', 'orig' => '৳3,900', 'badge' => 'BESTSELLER',
 								'img' => 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80',
 							],
 							[
-								'id' => 8, 'name' => 'Sylvan Vetiver Botanical Parfum', 'cat' => 'Fine Fragrance', 'price' => '৳9,500', 'orig' => null, 'badge' => 'NEW',
+								'id' => ( function_exists( 'wc_get_product_id_by_sku' ) && ( $m_id = wc_get_product_id_by_sku( 'KB-DEMO-08' ) ) ) ? $m_id : 8, 'name' => 'Sylvan Vetiver Botanical Parfum', 'cat' => 'Fine Fragrance', 'price' => '৳9,500', 'orig' => null, 'badge' => 'NEW',
 								'img' => 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=800&q=80',
 								'hover' => 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=80',
 							],

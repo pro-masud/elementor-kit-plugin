@@ -36,6 +36,10 @@ class Kinboni_Ajax {
 		add_action( 'wp_ajax_kinboni_subscribe_newsletter',        [ __CLASS__, 'subscribe_newsletter' ] );
 		add_action( 'wp_ajax_nopriv_kinboni_subscribe_newsletter', [ __CLASS__, 'subscribe_newsletter' ] );
 
+		// ── Cash on Delivery (COD) Express Order ───────────────
+		add_action( 'wp_ajax_kinboni_create_cod_order',        [ __CLASS__, 'create_cod_order' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_create_cod_order', [ __CLASS__, 'create_cod_order' ] );
+
 		// ── Add to Cart ───────────────────────────────────────
 		// add_action( 'wp_ajax_kinboni_add_to_cart',        [ __CLASS__, 'add_to_cart' ] );
 		// add_action( 'wp_ajax_nopriv_kinboni_add_to_cart', [ __CLASS__, 'add_to_cart' ] );
@@ -152,6 +156,38 @@ class Kinboni_Ajax {
 			'message' => __( 'Subscribed to Kinboni VIP Archive.', 'kinboni-pro' ),
 			'promo'   => 'LUXE20',
 		] );
+	}
+
+	/**
+	 * AJAX endpoint for creating Cash on Delivery (COD) order.
+	 */
+	public static function create_cod_order(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		// Rate limiting / duplicate prevention lock (15s per phone + payload)
+		$phone     = sanitize_text_field( wp_unslash( $_POST['customer_phone'] ?? '' ) );
+		$items_raw = sanitize_text_field( wp_unslash( $_POST['items'] ?? '' ) );
+		$lock_key  = 'kb_cod_lock_' . md5( $phone . $items_raw );
+
+		if ( get_transient( $lock_key ) ) {
+			wp_send_json_error( [
+				'message' => __( 'An order was just submitted. Please wait 15 seconds before submitting again.', 'kinboni-pro' ),
+			], 429 );
+		}
+
+		try {
+			$result = Kinboni_WooCommerce::create_cod_order( $_POST );
+			set_transient( $lock_key, 1, 15 );
+			wp_send_json_success( $result );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
 	}
 }
 
