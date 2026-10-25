@@ -31,13 +31,21 @@ class Kinboni_Loader {
 		// 4. AJAX endpoints.
 		Kinboni_Ajax::init();
 
-		// 5. Orchestrate WooCommerce & Elementor after all active plugins are loaded.
+		// 4.1 Custom Products & Inventory Management.
+		Kinboni_Products::init();
+
+		// 5. Admin Dashboard.
+		if ( is_admin() ) {
+			Kinboni_Admin::init();
+		}
+
+		// 6. Orchestrate WooCommerce & Elementor after all active plugins are loaded.
 		add_action( 'plugins_loaded', [ __CLASS__, 'on_plugins_loaded' ], 10 );
 
-		// 6. Dependency admin notices (for administrators).
+		// 7. Dependency admin notices (for administrators).
 		add_action( 'admin_notices', [ __CLASS__, 'dependency_notices' ] );
 
-		// 7. Global Storefront Modals, Drawers & Overlays in footer.
+		// 8. Global Storefront Modals, Drawers & Overlays in footer.
 		add_action( 'wp_footer', [ __CLASS__, 'render_storefront_modals' ], 30 );
 	}
 
@@ -82,6 +90,8 @@ class Kinboni_Loader {
 		require_once $dir . 'class-kinboni-elementor.php';
 		require_once $dir . 'class-kinboni-woocommerce.php';
 		require_once $dir . 'class-kinboni-ajax.php';
+		require_once $dir . 'class-kinboni-products.php';
+		require_once $dir . 'class-kinboni-admin.php';
 	}
 
 	/**
