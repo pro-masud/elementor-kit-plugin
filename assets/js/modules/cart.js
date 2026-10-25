@@ -24,10 +24,19 @@
   const FREE_SHIPPING_THRESHOLD = 2500;
 
   function stripTags(str) {
-    if (!str) return '';
-    const tmp = document.createElement('div');
-    tmp.innerHTML = str;
-    return tmp.textContent || tmp.innerText || String(str).replace(/<[^>]*>?/gm, '');
+    if (!str && str !== 0) return '';
+    let val = String(str);
+    if (val.includes('<')) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = val;
+      val = tmp.textContent || tmp.innerText || val.replace(/<[^>]*>?/gm, '');
+    }
+    if (val.includes('&')) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = val;
+      val = tmp.textContent || tmp.innerText || val;
+    }
+    return val.trim();
   }
 
   function safeFormatCurrency(amount) {
@@ -583,8 +592,8 @@
       // Render Item Cards
       const itemsHtml = items.map((item) => {
         const itemKey   = item.key || item.id;
-        const formattedUnitPrice = item.price_formatted || safeFormatCurrency(item.price);
-        const formattedLineTotal = item.line_total_formatted || safeFormatCurrency(item.line_total || (item.price * item.quantity));
+        const formattedUnitPrice = stripTags(item.price_formatted) || safeFormatCurrency(item.price);
+        const formattedLineTotal = stripTags(item.line_total_formatted) || safeFormatCurrency(item.line_total || (item.price * item.quantity));
         const itemImg = item.image || (window.kinboni && window.kinboni.placeholder) || '';
 
         return `
@@ -675,7 +684,7 @@
 
       if (subtotalEl) {
         const rawSubtotal = (this.cartData && this.cartData.subtotal_formatted) ? this.cartData.subtotal_formatted : safeFormatCurrency(subtotal);
-        subtotalEl.innerHTML = stripTags(rawSubtotal);
+        subtotalEl.textContent = stripTags(rawSubtotal);
       }
 
       if (discountRow && discountEl) {
@@ -684,7 +693,7 @@
           const formattedDiscount = (this.cartData && this.cartData.discount_total > 0 && this.cartData.discount_formatted)
             ? this.cartData.discount_formatted
             : safeFormatCurrency(discount);
-          discountEl.innerHTML = `-${stripTags(formattedDiscount)}`;
+          discountEl.textContent = `-${stripTags(formattedDiscount)}`;
         } else {
           discountRow.classList.add('hidden');
         }
@@ -694,7 +703,7 @@
         const rawTotal = (this.cartData && this.cartData.discount_total > 0 && this.cartData.total_formatted)
           ? this.cartData.total_formatted
           : safeFormatCurrency(total);
-        totalEl.innerHTML = stripTags(rawTotal);
+        totalEl.textContent = stripTags(rawTotal);
       }
 
       // ── Applied Promo Code Pill ──

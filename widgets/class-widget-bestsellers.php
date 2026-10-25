@@ -144,10 +144,10 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 		$this->add_control( 'catalog_source', [
 			'label'   => __( 'Product Source', 'kinboni-pro' ),
 			'type'    => \Elementor\Controls_Manager::SELECT,
-			'default' => 'demo',
+			'default' => 'wc',
 			'options' => [
-				'demo' => __( 'Atelier Editorial Demo Catalog (Fast Interactive Filtering)', 'kinboni-pro' ),
 				'wc'   => __( 'Live WooCommerce Catalog (Authoritative Storefront)', 'kinboni-pro' ),
+				'demo' => __( 'Atelier Editorial Demo Catalog (Fast Interactive Filtering)', 'kinboni-pro' ),
 			],
 		] );
 
@@ -278,7 +278,7 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 		$widget_id = $this->get_id();
 		$tabs      = $s['filter_tabs'] ?? [];
 		$has_published_wc = function_exists( 'wc_get_products' ) && ! empty( wc_get_products( [ 'limit' => 1, 'status' => 'publish' ] ) );
-		$source           = ( ! empty( $s['catalog_source'] ) ) ? $s['catalog_source'] : ( $has_published_wc ? 'wc' : 'demo' );
+		$source           = ( isset( $s['catalog_source'] ) && 'wc' === $s['catalog_source'] ) ? 'wc' : ( $has_published_wc ? 'wc' : 'demo' );
 
 		// Grid columns class
 		$cols = $s['grid_columns'] ?? '4';
@@ -349,6 +349,17 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 							'order'   => 'DESC',
 							'return'  => 'objects',
 						] );
+
+						// Fallback to recent creations if store has no sales yet
+						if ( empty( $products ) ) {
+							$products = wc_get_products( [
+								'status'  => 'publish',
+								'limit'   => $wc_limit,
+								'orderby' => 'date',
+								'order'   => 'DESC',
+								'return'  => 'objects',
+							] );
+						}
 
 						if ( ! empty( $products ) ) {
 							$curr = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '৳';
@@ -472,15 +483,28 @@ class Widget_Bestsellers extends \Elementor\Widget_Base {
 											<?php endif; ?>
 										</div>
 
-										<!-- Add to Cart CTA -->
-										<button 
-											type="button" 
-											onclick="if(window.registerProduct) registerProduct(<?php echo esc_attr( $json_payload ); ?>); if(window.CartController) CartController.add(<?php echo esc_attr( $pid ); ?>, 1);"
-											class="w-full mt-auto py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-gold-400 hover:text-stone-950 dark:bg-stone-800 dark:hover:bg-gold-400 dark:hover:text-stone-950 text-stone-900 dark:text-stone-200 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
-										>
-											<i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
-											<span><?php esc_html_e( 'Add to Bag', 'kinboni-pro' ); ?></span>
-										</button>
+										<!-- Action Buttons Flex Layout -->
+										<div class="flex items-center gap-2 mt-auto pt-3 border-t border-stone-100 dark:border-stone-800/80">
+											<button 
+												type="button" 
+												onclick="if(window.registerProduct) registerProduct(<?php echo esc_attr( $json_payload ); ?>); if(window.CartController) CartController.add(<?php echo esc_attr( $pid ); ?>, 1);"
+												class="flex-1 py-2.5 px-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-900 dark:text-stone-100 text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95"
+												title="<?php esc_attr_e( 'Add to shopping bag', 'kinboni-pro' ); ?>"
+											>
+												<i data-lucide="shopping-bag" class="w-3.5 h-3.5 flex-shrink-0 text-stone-600 dark:text-stone-300"></i>
+												<span class="whitespace-nowrap"><?php esc_html_e( 'Add to Bag', 'kinboni-pro' ); ?></span>
+											</button>
+
+											<button 
+												type="button" 
+												onclick="if(window.registerProduct) registerProduct(<?php echo esc_attr( $json_payload ); ?>); if(window.QuickOrderController) QuickOrderController.orderDirect(<?php echo esc_attr( $pid ); ?>, 1); else if(window.CartController) CartController.buyNow(<?php echo esc_attr( $pid ); ?>);"
+												class="kb-btn-ordernow flex-1 py-2.5 px-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-gold-500/25 active:scale-95"
+												title="<?php esc_attr_e( 'Direct Order', 'kinboni-pro' ); ?>"
+											>
+												<i data-lucide="zap" class="w-3.5 h-3.5 fill-stone-950 flex-shrink-0"></i>
+												<span class="whitespace-nowrap"><?php esc_html_e( 'Order Now', 'kinboni-pro' ); ?></span>
+											</button>
+										</div>
 									</div>
 
 								</div>

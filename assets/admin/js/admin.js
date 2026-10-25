@@ -603,22 +603,40 @@ jQuery(document).ready(function($) {
 			specs: specs
 		};
 
+		if (!payload.name) {
+			$btn.prop('disabled', false).css('opacity', '1');
+			showToast('Please enter product title.', true);
+			$('#kb-p-name').focus();
+			return;
+		}
+
 		$.post(ajaxurl, {
 			action: 'kinboni_save_product',
 			nonce: nonce,
 			product: payload
 		}, function(resp) {
 			$btn.prop('disabled', false).css('opacity', '1');
-			if (resp.success) {
-				showToast(resp.data.message || 'Creation synchronized with WooCommerce');
+			if (resp && resp.success) {
+				showToast((resp.data && resp.data.message) || 'Creation synchronized with WooCommerce');
 				$('#kb-product-modal').removeClass('is-open');
 				loadProducts(currentProdPage);
 			} else {
-				showToast(resp.data.message || 'Error saving creation', true);
+				showToast((resp && resp.data && resp.data.message) || 'Error saving creation', true);
 			}
-		}).fail(function() {
+		}).fail(function(xhr) {
 			$btn.prop('disabled', false).css('opacity', '1');
-			showToast('Server error while saving product', true);
+			let err = 'Server error while saving product';
+			if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+				err = xhr.responseJSON.data.message;
+			} else if (xhr && xhr.responseText) {
+				try {
+					const parsed = JSON.parse(xhr.responseText);
+					if (parsed && parsed.data && parsed.data.message) {
+						err = parsed.data.message;
+					}
+				} catch (e) {}
+			}
+			showToast(err, true);
 		});
 	});
 
@@ -640,6 +658,12 @@ jQuery(document).ready(function($) {
 			} else {
 				showToast(resp.data.message || 'Could not delete product', true);
 			}
+		}).fail(function(xhr) {
+			let err = 'Could not delete product';
+			if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+				err = xhr.responseJSON.data.message;
+			}
+			showToast(err, true);
 		});
 	});
 
@@ -702,6 +726,13 @@ jQuery(document).ready(function($) {
 			} else {
 				showToast(resp.data.message || 'Error saving category', true);
 			}
+		}).fail(function(xhr) {
+			$btn.prop('disabled', false);
+			let err = 'Error saving category';
+			if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+				err = xhr.responseJSON.data.message;
+			}
+			showToast(err, true);
 		});
 	});
 

@@ -117,6 +117,16 @@
         };
       }
 
+      // Email real-time validation
+      const emailInput = document.getElementById('order-customer-email');
+      if (emailInput) {
+        emailInput.oninput = () => {
+          emailInput.classList.remove('border-rose-500');
+          const err = document.getElementById('order-email-error');
+          if (err) err.classList.add('hidden');
+        };
+      }
+
       // Form submission: use onsubmit property to guarantee exactly ONE handler
       if (form) {
         form.onsubmit = (e) => {
@@ -550,7 +560,7 @@
      * Clear all validation errors.
      */
     clearErrors() {
-      ['order-name-error', 'order-phone-error', 'order-address-error'].forEach((id) => {
+      ['order-name-error', 'order-phone-error', 'order-email-error', 'order-address-error'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) {
           el.textContent = '';
@@ -579,12 +589,14 @@
 
       const nameInput = document.getElementById('order-customer-name');
       const phoneInput = document.getElementById('order-customer-phone');
+      const emailInput = document.getElementById('order-customer-email');
       const addressInput = document.getElementById('order-customer-address');
       const submitBtn = document.getElementById('order-submit-button');
       const btnText = document.getElementById('order-submit-btn-text');
 
       const name = nameInput ? nameInput.value.trim() : '';
       const phone = phoneInput ? phoneInput.value.trim() : '';
+      const email = emailInput ? emailInput.value.trim() : '';
       const address = addressInput ? addressInput.value.trim() : '';
 
       let hasError = false;
@@ -612,7 +624,18 @@
         hasError = true;
       }
 
-      // 3. Address validation
+      // 3. Email validation (optional; if entered, must be valid format)
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        const err = document.getElementById('order-email-error');
+        if (err) {
+          err.textContent = 'Please enter a valid email address, or leave it blank.';
+          err.classList.remove('hidden');
+        }
+        if (emailInput) emailInput.classList.add('border-rose-500');
+        hasError = true;
+      }
+
+      // 4. Address validation
       if (!address || address.length < 5) {
         const err = document.getElementById('order-address-error');
         if (err) {
@@ -623,7 +646,7 @@
         hasError = true;
       }
 
-      // 4. Items validation
+      // 5. Items validation
       const items = this.getActiveItems();
       if (!items || items.length === 0) {
         safeShowToast('Your order has no selected products. Please choose a product.', 'error');
@@ -667,6 +690,7 @@
       formData.append('nonce', nonce);
       formData.append('customer_name', name);
       formData.append('customer_phone', phone);
+      formData.append('customer_email', email);
       formData.append('customer_address', address);
       formData.append('delivery_zone', selectedZone);
       formData.append('promo_code', window.STATE?.activePromo || '');

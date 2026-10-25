@@ -577,14 +577,27 @@ class Kinboni_WooCommerce {
 	}
 
 	/**
-	 * Ensure WooCommerce cart & session are loaded (needed in AJAX context).
+	 * Ensure WooCommerce cart & session are loaded.
+	 * Preserves full-page caching (LiteSpeed/WP Rocket) by never forcing session creation for pure guest GET views.
 	 */
 	public static function ensure_cart_loaded(): void {
 		if ( ! function_exists( 'WC' ) ) {
 			return;
 		}
 
-		if ( is_null( WC()->session ) ) {
+		$has_session_cookie = false;
+		if ( ! empty( $_COOKIE ) ) {
+			foreach ( array_keys( $_COOKIE ) as $cookie_name ) {
+				if ( strpos( $cookie_name, 'wp_woocommerce_session_' ) === 0 || 'woocommerce_cart_hash' === $cookie_name || 'woocommerce_items_in_cart' === $cookie_name ) {
+					$has_session_cookie = true;
+					break;
+				}
+			}
+		}
+
+		$should_init_session = wp_doing_ajax() || is_user_logged_in() || $has_session_cookie;
+
+		if ( is_null( WC()->session ) && $should_init_session ) {
 			$session_class = apply_filters( 'woocommerce_session_handler', '\WC_Session_Handler' );
 			if ( class_exists( $session_class ) ) {
 				WC()->session = new $session_class();
@@ -592,11 +605,11 @@ class Kinboni_WooCommerce {
 			}
 		}
 
-		if ( is_null( WC()->customer ) && class_exists( '\WC_Customer' ) ) {
+		if ( is_null( WC()->customer ) && class_exists( '\WC_Customer' ) && ( WC()->session || is_user_logged_in() ) ) {
 			WC()->customer = new \WC_Customer( get_current_user_id(), true );
 		}
 
-		if ( is_null( WC()->cart ) && class_exists( '\WC_Cart' ) ) {
+		if ( is_null( WC()->cart ) && class_exists( '\WC_Cart' ) && WC()->session ) {
 			WC()->cart = new \WC_Cart();
 			WC()->cart->get_cart_from_session();
 		}
@@ -604,6 +617,7 @@ class Kinboni_WooCommerce {
 
 	/**
 	 * Smart product resolver: resolves product by ID, demo SKU, or title.
+	 * Strictly eliminates silent random substitution to prevent wrong product orders.
 	 *
 	 * @param int|string $product_id Product ID or demo ID.
 	 * @param string     $title      Optional product name fallback.
@@ -622,20 +636,24 @@ class Kinboni_WooCommerce {
 			}
 		}
 
-		// Intelligent Fallback 2: Resolve by Product Title
+		// Intelligent Fallback 2: Resolve by _kinboni_demo_id meta
+		if ( ! $product && $product_id > 0 && function_exists( 'wc_get_products' ) ) {
+			$demo_matches = wc_get_products( [
+				'limit'      => 1,
+				'status'     => 'publish',
+				'meta_key'   => '_kinboni_demo_id',
+				'meta_value' => $product_id,
+			] );
+			if ( ! empty( $demo_matches ) ) {
+				$product = reset( $demo_matches );
+			}
+		}
+
+		// Intelligent Fallback 3: Resolve by Product Title
 		if ( ! $product && ! empty( $title ) ) {
 			$matched_post = get_page_by_title( sanitize_text_field( $title ), OBJECT, 'product' );
 			if ( $matched_post ) {
 				$product = wc_get_product( $matched_post->ID );
-			}
-		}
-
-		// Intelligent Fallback 3: Resolve by index for demo IDs 1..12 among published WooCommerce products
-		if ( ! $product && $product_id > 0 && $product_id <= 12 && function_exists( 'wc_get_products' ) ) {
-			$available_products = wc_get_products( [ 'limit' => 12, 'status' => 'publish' ] );
-			if ( ! empty( $available_products ) ) {
-				$target_index = ( $product_id - 1 ) % count( $available_products );
-				$product      = $available_products[ $target_index ] ?? null;
 			}
 		}
 
@@ -1147,11 +1165,14 @@ class Kinboni_WooCommerce {
 	 * @return string Formatted price.
 	 */
 	public static function format_price( float $amount ): string {
-		if ( function_exists( 'wc_price' ) ) {
-			return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
-		}
-		$sym = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '৳';
-		return $sym . number_format( $amount, 0 );
+		$sym          = function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '৳';
+		$decimals     = function_exists( 'wc_get_price_decimals' ) ? wc_get_price_decimals() : 0;
+		$dec_sep      = function_exists( 'wc_get_price_decimal_separator' ) ? wc_get_price_decimal_separator() : '.';
+		$thou_sep     = function_exists( 'wc_get_price_thousand_separator' ) ? wc_get_price_thousand_separator() : ',';
+		$price_format = function_exists( 'get_woocommerce_price_format' ) ? get_woocommerce_price_format() : '%1$s%2$s';
+
+		$formatted_number = number_format( (float) $amount, $decimals, $dec_sep, $thou_sep );
+		return sprintf( $price_format, $sym, $formatted_number );
 	}
 
 	/**
@@ -1169,6 +1190,7 @@ class Kinboni_WooCommerce {
 		// 1. Sanitize & validate customer details
 		$customer_name    = sanitize_text_field( $data['customer_name'] ?? '' );
 		$customer_phone   = sanitize_text_field( $data['customer_phone'] ?? '' );
+		$customer_email   = sanitize_email( $data['customer_email'] ?? '' );
 		$customer_address = sanitize_textarea_field( $data['customer_address'] ?? '' );
 		$delivery_zone    = sanitize_text_field( $data['delivery_zone'] ?? 'inside' );
 		$promo_code       = strtoupper( sanitize_text_field( $data['promo_code'] ?? '' ) );
@@ -1300,12 +1322,17 @@ class Kinboni_WooCommerce {
 				}
 			}
 
-			// Built-in Atelier VIP Privilege Vouchers fallback
+			// Built-in Atelier VIP Privilege Vouchers & Admin Settings fallback
 			if ( 0.0 === $discount_amount ) {
+				$settings       = class_exists( 'Kinboni_Admin' ) ? Kinboni_Admin::get_settings() : [];
+				$admin_vip_code = ! empty( $settings['vip_promo_code'] ) ? strtoupper( $settings['vip_promo_code'] ) : 'LUXE20';
+				$admin_vip_pct  = ! empty( $settings['vip_discount_percent'] ) ? ( (float) $settings['vip_discount_percent'] ) / 100 : 0.20;
+
 				$atelier_promos = [
-					'LUXE20'    => 0.20,
-					'KINBONI10' => 0.10,
-					'WELCOME'   => 0.15,
+					$admin_vip_code => $admin_vip_pct,
+					'LUXE20'        => 0.20,
+					'KINBONI10'     => 0.10,
+					'WELCOME'       => 0.15,
 				];
 				if ( isset( $atelier_promos[ $promo_code ] ) ) {
 					$applied_coupon  = $promo_code;
@@ -1370,14 +1397,47 @@ class Kinboni_WooCommerce {
 			'city'       => $city,
 			'country'    => 'BD',
 		];
+		if ( ! empty( $customer_email ) ) {
+			$address_fields['email'] = $customer_email;
+		}
 		$order->set_address( $address_fields, 'billing' );
 		$order->set_address( $address_fields, 'shipping' );
 
+		// Customer Account Association & Auto-Registration
 		if ( is_user_logged_in() ) {
-			$current_user = wp_get_current_user();
+			$current_user  = wp_get_current_user();
+			$billing_email = ! empty( $current_user->user_email ) ? $current_user->user_email : $customer_email;
 			$order->set_customer_id( $current_user->ID );
-			if ( ! empty( $current_user->user_email ) ) {
-				$order->set_billing_email( $current_user->user_email );
+			if ( ! empty( $billing_email ) ) {
+				$order->set_billing_email( $billing_email );
+			}
+		} elseif ( ! empty( $customer_email ) && is_email( $customer_email ) ) {
+			$order->set_billing_email( $customer_email );
+			$existing_user = get_user_by( 'email', $customer_email );
+			if ( $existing_user ) {
+				$order->set_customer_id( $existing_user->ID );
+			} else {
+				$username_base = sanitize_user( current( explode( '@', $customer_email ) ), true );
+				$username      = $username_base ?: 'customer_' . time();
+				if ( username_exists( $username ) ) {
+					$username .= '_' . wp_rand( 100, 999 );
+				}
+				$random_password = wp_generate_password( 12, false );
+				$new_user_id     = wp_create_user( $username, $random_password, $customer_email );
+				if ( ! is_wp_error( $new_user_id ) ) {
+					$user = new \WP_User( $new_user_id );
+					$user->set_role( 'customer' );
+					wp_update_user( [
+						'ID'           => $new_user_id,
+						'display_name' => $customer_name,
+						'first_name'   => $customer_name,
+					] );
+					if ( class_exists( '\WC_Emails' ) ) {
+						\WC_Emails::instance();
+						do_action( 'woocommerce_created_customer', $new_user_id, [ 'user_pass' => $random_password ], true );
+					}
+					$order->set_customer_id( $new_user_id );
+				}
 			}
 		}
 
@@ -1395,8 +1455,10 @@ class Kinboni_WooCommerce {
 		$order->set_status( 'processing', __( 'Order placed via Kinboni Express Checkout.', 'kinboni-pro' ) );
 		$order->save();
 
-		// 12. Reduce stock levels
-		if ( function_exists( 'wc_reduce_stock_levels' ) ) {
+		// 12. Reduce stock levels safely (prevents double stock reduction)
+		if ( function_exists( 'wc_maybe_reduce_stock_levels' ) ) {
+			wc_maybe_reduce_stock_levels( $order->get_id() );
+		} elseif ( function_exists( 'wc_reduce_stock_levels' ) ) {
 			wc_reduce_stock_levels( $order->get_id() );
 		}
 
@@ -1437,6 +1499,7 @@ class Kinboni_WooCommerce {
 			'order_received_url' => $order->get_checkout_order_received_url(),
 			'customer_name'      => $customer_name,
 			'customer_phone'     => $customer_phone,
+			'customer_email'     => $customer_email,
 			'customer_address'   => $customer_address,
 			'delivery_zone'      => $delivery_zone,
 			'subtotal'           => $order_subtotal,

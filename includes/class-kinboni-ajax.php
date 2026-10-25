@@ -118,6 +118,10 @@ class Kinboni_Ajax {
 	 * AJAX endpoint for VIP newsletter subscription.
 	 */
 	public static function subscribe_newsletter(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
 		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
 		if ( ! is_email( $email ) ) {
 			wp_send_json_error( [ 'message' => __( 'Please enter a valid email address.', 'kinboni-pro' ) ], 400 );
@@ -126,6 +130,11 @@ class Kinboni_Ajax {
 		$subscribers = get_option( 'kinboni_newsletter_subscribers', [] );
 		if ( ! is_array( $subscribers ) ) {
 			$subscribers = [];
+		}
+
+		// Prevent unlimited option row bloat by capping subscriber history
+		if ( count( $subscribers ) > 5000 ) {
+			$subscribers = array_slice( $subscribers, -4000 );
 		}
 
 		$already_subscribed = false;
@@ -146,9 +155,14 @@ class Kinboni_Ajax {
 			do_action( 'kinboni_vip_subscriber_added', $email );
 		}
 
+		$settings = class_exists( 'Kinboni_Admin' ) ? Kinboni_Admin::get_settings() : [];
+		$promo    = ! empty( $_POST['promo_code'] ) 
+			? strtoupper( sanitize_text_field( wp_unslash( $_POST['promo_code'] ) ) )
+			: ( ! empty( $settings['vip_promo_code'] ) ? $settings['vip_promo_code'] : 'LUXE20' );
+
 		wp_send_json_success( [
 			'message' => __( 'Subscribed to Kinboni VIP Archive.', 'kinboni-pro' ),
-			'promo'   => 'LUXE20',
+			'promo'   => $promo,
 		] );
 	}
 

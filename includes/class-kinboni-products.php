@@ -233,15 +233,30 @@ class Kinboni_Products {
 		add_action( 'wp_ajax_kinboni_save_category',         [ __CLASS__, 'ajax_save_category' ] );
 		add_action( 'wp_ajax_kinboni_delete_category',       [ __CLASS__, 'ajax_delete_category' ] );
 		add_action( 'wp_ajax_kinboni_migrate_demo_products', [ __CLASS__, 'ajax_migrate_demo_products' ] );
+
+		// Cache invalidation hooks to eliminate N+1 DB queries while keeping data synchronized
+		add_action( 'save_post_product',          [ __CLASS__, 'purge_storefront_products_cache' ] );
+		add_action( 'woocommerce_update_product', [ __CLASS__, 'purge_storefront_products_cache' ] );
+		add_action( 'woocommerce_delete_product', [ __CLASS__, 'purge_storefront_products_cache' ] );
+		add_action( 'woocommerce_trash_product',  [ __CLASS__, 'purge_storefront_products_cache' ] );
+	}
+
+	/**
+	 * Purge cached storefront products transient.
+	 */
+	public static function purge_storefront_products_cache( ...$args ): void {
+		delete_transient( 'kinboni_storefront_products_data' );
 	}
 
 	/**
 	 * Check administrative capabilities.
 	 */
 	private static function check_auth(): void {
-		check_ajax_referer( 'kinboni_admin_nonce', 'nonce' );
+		if ( ! check_ajax_referer( 'kinboni_admin_nonce', 'nonce', false ) ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed or session expired. Please reload the dashboard.', 'kinboni-pro' ) ] );
+		}
 		if ( ! current_user_can( 'manage_woocommerce' ) && ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'kinboni-pro' ) ], 403 );
+			wp_send_json_error( [ 'message' => __( 'Permission denied. Administrator access required.', 'kinboni-pro' ) ] );
 		}
 	}
 
@@ -275,7 +290,7 @@ class Kinboni_Products {
 		}
 
 		if ( ! function_exists( 'wc_get_products' ) ) {
-			wp_send_json_error( [ 'message' => __( 'WooCommerce is not active.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'WooCommerce is not active.', 'kinboni-pro' ) ] );
 		}
 
 		$results  = wc_get_products( $args );
@@ -332,12 +347,12 @@ class Kinboni_Products {
 
 		$product_id = absint( $_POST['product_id'] ?? 0 );
 		if ( ! $product_id || ! function_exists( 'wc_get_product' ) ) {
-			wp_send_json_error( [ 'message' => __( 'Invalid product ID.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Invalid product ID.', 'kinboni-pro' ) ] );
 		}
 
 		$p = wc_get_product( $product_id );
 		if ( ! $p ) {
-			wp_send_json_error( [ 'message' => __( 'Product not found.', 'kinboni-pro' ) ], 404 );
+			wp_send_json_error( [ 'message' => __( 'Product not found.', 'kinboni-pro' ) ] );
 		}
 
 		$img_id = $p->get_image_id();
@@ -394,13 +409,13 @@ class Kinboni_Products {
 
 		$data = $_POST['product'] ?? [];
 		if ( empty( $data ) || ! is_array( $data ) ) {
-			wp_send_json_error( [ 'message' => __( 'Invalid product data.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Invalid product data received.', 'kinboni-pro' ) ] );
 		}
 
 		$pid = absint( $data['id'] ?? 0 );
 
-		if ( ! class_exists( '\WC_Product_Simple' ) ) {
-			wp_send_json_error( [ 'message' => __( 'WooCommerce is not active.', 'kinboni-pro' ) ], 400 );
+		if ( ! class_exists( 'WC_Product_Simple' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is not active.', 'kinboni-pro' ) ] );
 		}
 
 		if ( $pid > 0 ) {
@@ -415,7 +430,7 @@ class Kinboni_Products {
 		// Core fields
 		$name = sanitize_text_field( $data['name'] ?? '' );
 		if ( empty( $name ) ) {
-			wp_send_json_error( [ 'message' => __( 'Product name is required.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Product title is required.', 'kinboni-pro' ) ] );
 		}
 
 		$product->set_name( $name );
@@ -431,9 +446,11 @@ class Kinboni_Products {
 		$status = sanitize_key( $data['status'] ?? 'publish' );
 		$product->set_status( in_array( $status, [ 'publish', 'draft', 'pending' ], true ) ? $status : 'publish' );
 
-		// Pricing
-		$regular_price = sanitize_text_field( $data['regular_price'] ?? '' );
-		$sale_price    = sanitize_text_field( $data['sale_price'] ?? '' );
+		// Pricing: Cleanly format decimal numbers to prevent WooCommerce exceptions
+		$raw_regular   = sanitize_text_field( $data['regular_price'] ?? '' );
+		$raw_sale      = sanitize_text_field( $data['sale_price'] ?? '' );
+		$regular_price = ( '' !== $raw_regular ) ? ( function_exists( 'wc_format_decimal' ) ? wc_format_decimal( $raw_regular ) : preg_replace( '/[^\d.]/', '', $raw_regular ) ) : '';
+		$sale_price    = ( '' !== $raw_sale ) ? ( function_exists( 'wc_format_decimal' ) ? wc_format_decimal( $raw_sale ) : preg_replace( '/[^\d.]/', '', $raw_sale ) ) : '';
 
 		$product->set_regular_price( $regular_price );
 		if ( '' !== $sale_price && (float) $sale_price < (float) $regular_price ) {
@@ -444,13 +461,25 @@ class Kinboni_Products {
 			$product->set_price( $regular_price );
 		}
 
-		// SKU & Stock
+		// SKU & Stock: Check duplicate SKU before attempting to save
 		if ( isset( $data['sku'] ) ) {
 			$sku = sanitize_text_field( $data['sku'] );
-			try {
-				$product->set_sku( $sku );
-			} catch ( \Exception $e ) {
-				// Duplicate SKU catch
+			if ( ! empty( $sku ) ) {
+				if ( function_exists( 'wc_get_product_id_by_sku' ) ) {
+					$existing_sku_id = wc_get_product_id_by_sku( $sku );
+					if ( $existing_sku_id && $existing_sku_id !== $pid ) {
+						wp_send_json_error( [
+							'message' => sprintf( __( 'The SKU "%s" is already assigned to another product.', 'kinboni-pro' ), $sku ),
+						] );
+					}
+				}
+				try {
+					$product->set_sku( $sku );
+				} catch ( \Throwable $e ) {
+					wp_send_json_error( [ 'message' => $e->getMessage() ] );
+				}
+			} else {
+				$product->set_sku( '' );
 			}
 		}
 
@@ -468,23 +497,36 @@ class Kinboni_Products {
 
 		// Categories
 		if ( isset( $data['categories'] ) && is_array( $data['categories'] ) ) {
-			$cat_ids = array_map( 'absint', $data['categories'] );
+			$cat_ids = array_values( array_filter( array_map( 'absint', $data['categories'] ) ) );
 			$product->set_category_ids( $cat_ids );
+		} else {
+			$product->set_category_ids( [] );
 		}
 
 		// Featured Image
 		if ( ! empty( $data['image_id'] ) ) {
 			$product->set_image_id( absint( $data['image_id'] ) );
+		} else {
+			$product->set_image_id( 0 );
 		}
 
 		// Gallery
 		if ( isset( $data['gallery_ids'] ) && is_array( $data['gallery_ids'] ) ) {
-			$gallery_ids = array_map( 'absint', $data['gallery_ids'] );
+			$gallery_ids = array_values( array_filter( array_map( 'absint', $data['gallery_ids'] ) ) );
 			$product->set_gallery_image_ids( $gallery_ids );
+		} else {
+			$product->set_gallery_image_ids( [] );
 		}
 
-		// Save WooCommerce product
-		$saved_id = $product->save();
+		// Save WooCommerce product safely with try/catch
+		try {
+			$saved_id = $product->save();
+			if ( ! $saved_id ) {
+				throw new \Exception( __( 'WooCommerce failed to generate a product record.', 'kinboni-pro' ) );
+			}
+		} catch ( \Throwable $e ) {
+			wp_send_json_error( [ 'message' => sprintf( __( 'Error saving product: %s', 'kinboni-pro' ), $e->getMessage() ) ] );
+		}
 
 		// Custom Atelier Meta
 		if ( isset( $data['badge'] ) ) {
@@ -502,6 +544,8 @@ class Kinboni_Products {
 			update_post_meta( $saved_id, '_kinboni_specs', $specs );
 		}
 
+		self::purge_storefront_products_cache();
+
 		wp_send_json_success( [
 			'message'    => __( 'Product saved and synchronized with WooCommerce.', 'kinboni-pro' ),
 			'product_id' => $saved_id,
@@ -516,16 +560,18 @@ class Kinboni_Products {
 
 		$product_id = absint( $_POST['product_id'] ?? 0 );
 		if ( ! $product_id || ! function_exists( 'wc_get_product' ) ) {
-			wp_send_json_error( [ 'message' => __( 'Invalid product ID.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Invalid product ID.', 'kinboni-pro' ) ] );
 		}
 
 		$product = wc_get_product( $product_id );
 		if ( ! $product ) {
-			wp_send_json_error( [ 'message' => __( 'Product not found.', 'kinboni-pro' ) ], 404 );
+			wp_send_json_error( [ 'message' => __( 'Product not found.', 'kinboni-pro' ) ] );
 		}
 
 		// Move to trash
 		$product->delete( false );
+
+		self::purge_storefront_products_cache();
 
 		wp_send_json_success( [ 'message' => __( 'Product moved to trash.', 'kinboni-pro' ) ] );
 	}
@@ -538,7 +584,7 @@ class Kinboni_Products {
 
 		$name = sanitize_text_field( $_POST['name'] ?? '' );
 		if ( empty( $name ) ) {
-			wp_send_json_error( [ 'message' => __( 'Category name is required.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Category name is required.', 'kinboni-pro' ) ] );
 		}
 
 		$slug     = sanitize_title( $_POST['slug'] ?? $name );
@@ -554,7 +600,7 @@ class Kinboni_Products {
 				'description' => $desc,
 			] );
 			if ( is_wp_error( $res ) ) {
-				wp_send_json_error( [ 'message' => $res->get_error_message() ], 400 );
+				wp_send_json_error( [ 'message' => $res->get_error_message() ] );
 			}
 			$term_id = $cat_id;
 		} else {
@@ -564,7 +610,7 @@ class Kinboni_Products {
 				'description' => $desc,
 			] );
 			if ( is_wp_error( $res ) ) {
-				wp_send_json_error( [ 'message' => $res->get_error_message() ], 400 );
+				wp_send_json_error( [ 'message' => $res->get_error_message() ] );
 			}
 			$term_id = $res['term_id'];
 		}
@@ -587,12 +633,12 @@ class Kinboni_Products {
 
 		$term_id = absint( $_POST['term_id'] ?? 0 );
 		if ( ! $term_id ) {
-			wp_send_json_error( [ 'message' => __( 'Invalid category ID.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Invalid category ID.', 'kinboni-pro' ) ] );
 		}
 
 		$res = wp_delete_term( $term_id, 'product_cat' );
 		if ( is_wp_error( $res ) || ! $res ) {
-			wp_send_json_error( [ 'message' => __( 'Could not delete category.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'Could not delete category.', 'kinboni-pro' ) ] );
 		}
 
 		wp_send_json_success( [ 'message' => __( 'Category removed successfully.', 'kinboni-pro' ) ] );
@@ -605,7 +651,7 @@ class Kinboni_Products {
 		self::check_auth();
 
 		if ( ! class_exists( 'WooCommerce' ) || ! class_exists( '\WC_Product_Simple' ) ) {
-			wp_send_json_error( [ 'message' => __( 'WooCommerce must be active to import creations.', 'kinboni-pro' ) ], 400 );
+			wp_send_json_error( [ 'message' => __( 'WooCommerce must be active to import creations.', 'kinboni-pro' ) ] );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -742,6 +788,8 @@ class Kinboni_Products {
 			}
 		}
 
+		self::purge_storefront_products_cache();
+
 		wp_send_json_success( [
 			'message' => sprintf(
 				__( 'Migration complete: %d created, %d updated. Duplicate prevention guaranteed.', 'kinboni-pro' ),
@@ -789,6 +837,12 @@ class Kinboni_Products {
 	public static function get_storefront_products(): array {
 		if ( ! function_exists( 'wc_get_products' ) ) {
 			return [];
+		}
+
+		$cache_key = 'kinboni_storefront_products_data';
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached && is_array( $cached ) ) {
+			return $cached;
 		}
 
 		$products = wc_get_products( [
@@ -899,6 +953,10 @@ class Kinboni_Products {
 				'onSale'        => $p->is_on_sale(),
 				'permalink'     => get_permalink( $pid ),
 			];
+		}
+
+		if ( ! empty( $list ) ) {
+			set_transient( $cache_key, $list, HOUR_IN_SECONDS * 6 );
 		}
 
 		return $list;

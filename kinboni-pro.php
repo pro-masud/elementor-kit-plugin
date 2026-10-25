@@ -3,7 +3,7 @@
  * Plugin Name: KINBONI Pro
  * Plugin URI:  https://kinboni.com
  * Description: KINBONI luxury storefront — Elementor widgets & WooCommerce integration.
- * Version:     2.0.0
+ * Version:     2.0.1
  * Author:      KINBONI Atelier
  * Author URI:  https://kinboni.com
  * Text Domain: kinboni-pro
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 /* ──────────────────────────────────────────────
  * Constants
  * ────────────────────────────────────────────── */
-define( 'KINBONI_VERSION', '2.0.0' );
+define( 'KINBONI_VERSION', '2.0.1' );
 define( 'KINBONI_FILE',    __FILE__ );
 define( 'KINBONI_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'KINBONI_URL',     plugin_dir_url( __FILE__ ) );

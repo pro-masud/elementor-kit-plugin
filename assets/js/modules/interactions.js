@@ -262,6 +262,9 @@
           const fd = new FormData();
           fd.append('action', 'kinboni_subscribe_newsletter');
           fd.append('email', email);
+          if (promoCode) {
+            fd.append('promo_code', promoCode);
+          }
           if (nonce) {
             fd.append('nonce', nonce);
           }

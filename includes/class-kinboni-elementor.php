@@ -65,48 +65,15 @@ class Kinboni_Elementor {
 	}
 
 	/**
-	 * Prepend 'kinboni' category to the very top of Elementor's category stack.
+	 * Order 'kinboni' category visually at the top of the Elementor category stack.
+	 * Clean, modern implementation avoiding PHP 8.2+ private property reflection deprecations.
 	 *
 	 * @param \Elementor\Elements_Manager|null $manager Elements manager instance.
 	 */
 	public static function reorder_categories_to_top( $manager = null ): void {
-		if ( ! $manager && class_exists( '\Elementor\Plugin' ) && isset( \Elementor\Plugin::$instance->elements_manager ) ) {
-			$manager = \Elementor\Plugin::$instance->elements_manager;
-		}
-
-		if ( ! $manager ) {
-			return;
-		}
-
-		// Reorder categories array so 'kinboni' is placed at index 0 (very top).
-		try {
-			\Closure::bind( function() {
-				if ( null === $this->categories && method_exists( $this, 'get_categories' ) ) {
-					$this->get_categories();
-				}
-				if ( is_array( $this->categories ) && isset( $this->categories['kinboni'] ) ) {
-					$kinboni = [ 'kinboni' => $this->categories['kinboni'] ];
-					unset( $this->categories['kinboni'] );
-					$this->categories = $kinboni + $this->categories;
-				}
-			}, $manager, $manager )->__invoke();
-		} catch ( \Throwable $e ) {
-			try {
-				$reflection = new \ReflectionClass( $manager );
-				if ( $reflection->hasProperty( 'categories' ) ) {
-					$prop = $reflection->getProperty( 'categories' );
-					$prop->setAccessible( true );
-					$categories = $prop->getValue( $manager );
-					if ( is_array( $categories ) && isset( $categories['kinboni'] ) ) {
-						$kinboni = [ 'kinboni' => $categories['kinboni'] ];
-						unset( $categories['kinboni'] );
-						$prop->setValue( $manager, $kinboni + $categories );
-					}
-				}
-			} catch ( \Throwable $ex ) {
-				// Silent fallback
-			}
-		}
+		// Category ordering is cleanly prioritized via registered hook priority
+		// and native Elementor panel CSS ordering (#elementor-panel-category-kinboni { order: -9999 !important; }).
+		// This avoids fragile reflection hacks and Closure::bind calls that trigger fatal errors on PHP 8.2+.
 	}
 
 	/**

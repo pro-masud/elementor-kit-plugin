@@ -100,10 +100,10 @@ class Widget_Featured extends \Elementor\Widget_Base {
 		$this->add_control( 'catalog_source', [
 			'label'   => __( 'Product Source', 'kinboni-pro' ),
 			'type'    => \Elementor\Controls_Manager::SELECT,
-			'default' => 'demo',
+			'default' => 'wc',
 			'options' => [
-				'demo' => __( 'Atelier Editorial Demo Catalog (Instant 0ms, 8 Handcrafted Pieces)', 'kinboni-pro' ),
 				'wc'   => __( 'Live WooCommerce Catalog (Authoritative Storefront)', 'kinboni-pro' ),
+				'demo' => __( 'Atelier Editorial Demo Catalog (Instant 0ms, 8 Handcrafted Pieces)', 'kinboni-pro' ),
 			],
 		] );
 
@@ -280,7 +280,7 @@ class Widget_Featured extends \Elementor\Widget_Base {
 
 		$section_id = ! empty( $s['section_id'] ) ? esc_attr( $s['section_id'] ) : 'featured';
 		$has_published_wc = function_exists( 'wc_get_products' ) && ! empty( wc_get_products( [ 'limit' => 1, 'status' => 'publish' ] ) );
-		$source           = ( ! empty( $s['catalog_source'] ) ) ? $s['catalog_source'] : ( $has_published_wc ? 'wc' : 'demo' );
+		$source           = ( isset( $s['catalog_source'] ) && 'wc' === $s['catalog_source'] ) ? 'wc' : ( $has_published_wc ? 'wc' : 'demo' );
 		$widget_id  = $this->get_id();
 
 		// Grid columns class

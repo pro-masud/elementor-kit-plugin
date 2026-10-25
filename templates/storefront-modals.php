@@ -326,6 +326,13 @@ defined( 'ABSPATH' ) || exit;
             <h4 class="font-serif text-lg sm:text-xl font-semibold text-stone-900 dark:text-white mt-0.5"><?php esc_html_e( 'Where should we deliver your order?', 'kinboni-pro' ); ?></h4>
           </div>
 
+          <?php
+          $current_logged_user = is_user_logged_in() ? wp_get_current_user() : null;
+          $prefill_user_name   = $current_logged_user ? ( $current_logged_user->display_name ?: $current_logged_user->user_login ) : '';
+          $prefill_user_email  = $current_logged_user ? $current_logged_user->user_email : '';
+          $prefill_user_phone  = ( $current_logged_user && function_exists( 'get_user_meta' ) ) ? get_user_meta( $current_logged_user->ID, 'billing_phone', true ) : '';
+          ?>
+
           <form id="quick-order-form" class="space-y-4" novalidate>
             <div>
               <label for="order-customer-name" class="block text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 mb-1.5">
@@ -338,6 +345,7 @@ defined( 'ABSPATH' ) || exit;
                 <input 
                   type="text" 
                   id="order-customer-name" 
+                  value="<?php echo esc_attr( $prefill_user_name ); ?>"
                   placeholder="<?php esc_attr_e( 'Enter your full name', 'kinboni-pro' ); ?>" 
                   class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm focus:outline-none focus:border-gold-500 transition-colors shadow-2xs"
                   required
@@ -357,6 +365,7 @@ defined( 'ABSPATH' ) || exit;
                 <input 
                   type="tel" 
                   id="order-customer-phone" 
+                  value="<?php echo esc_attr( $prefill_user_phone ); ?>"
                   placeholder="01XXXXXXXXX" 
                   maxlength="14"
                   class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm focus:outline-none focus:border-gold-500 transition-colors shadow-2xs"
@@ -367,8 +376,28 @@ defined( 'ABSPATH' ) || exit;
             </div>
 
             <div>
+              <label for="order-customer-email" class="block text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 mb-1.5 flex items-center justify-between">
+                <span><?php esc_html_e( '3. Email Address', 'kinboni-pro' ); ?></span>
+                <span class="text-[10px] text-stone-400 font-normal lowercase">(<?php esc_html_e( 'optional — creates tracking account', 'kinboni-pro' ); ?>)</span>
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                  <i data-lucide="mail" class="w-4 h-4"></i>
+                </span>
+                <input 
+                  type="email" 
+                  id="order-customer-email" 
+                  value="<?php echo esc_attr( $prefill_user_email ); ?>"
+                  placeholder="<?php esc_attr_e( 'name@example.com (optional)', 'kinboni-pro' ); ?>" 
+                  class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm focus:outline-none focus:border-gold-500 transition-colors shadow-2xs"
+                />
+              </div>
+              <p id="order-email-error" class="hidden mt-1 text-xs text-rose-500 font-medium"></p>
+            </div>
+
+            <div>
               <label for="order-customer-address" class="block text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 mb-1.5">
-                <?php esc_html_e( '3. Complete Delivery Address', 'kinboni-pro' ); ?> <span class="text-rose-500">*</span>
+                <?php esc_html_e( '4. Complete Delivery Address', 'kinboni-pro' ); ?> <span class="text-rose-500">*</span>
               </label>
               <div class="relative">
                 <span class="absolute top-3.5 left-0 pl-3.5 flex items-start pointer-events-none text-stone-400">

@@ -40,11 +40,11 @@
   }
 
   function getProductsList() {
-    if (Array.isArray(window.PRODUCTS) && window.PRODUCTS.length > 0) {
-      return window.PRODUCTS;
-    }
     if (window.kinboni && Array.isArray(window.kinboni.products) && window.kinboni.products.length > 0) {
       window.PRODUCTS = window.kinboni.products.slice();
+      return window.PRODUCTS;
+    }
+    if (Array.isArray(window.PRODUCTS) && window.PRODUCTS.length > 0) {
       return window.PRODUCTS;
     }
     return [];

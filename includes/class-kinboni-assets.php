@@ -186,21 +186,10 @@ class Kinboni_Assets {
 			true
 		);
 
-		// Localize parameters on handles so 'window.kinboni' is always defined.
+		// Localize parameters on primary dependency handle 'kinboni-pro' so 'window.kinboni'
+		// is globally defined once without generating 1.95MB of duplicate inline script tags.
 		$js_data = self::get_js_data();
 		wp_localize_script( 'kinboni-pro', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-utils', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-theme', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-cart', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-wishlist', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-quickview', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-search', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-product-renderer', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-quickorder', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-live-sales', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-testimonials', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-interactions', 'kinboni', $js_data );
-		wp_localize_script( 'kinboni-app', 'kinboni', $js_data );
 	}
 
 	/**
