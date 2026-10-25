@@ -187,11 +187,16 @@ class Kinboni_Assets {
 			$currency = get_woocommerce_currency_symbol();
 		}
 
+		$products = class_exists( 'Kinboni_Products' ) ? Kinboni_Products::get_storefront_products() : [];
+
 		return [
-			'ajax_url' => admin_url( 'admin-ajax.php' ),
-			'nonce'    => wp_create_nonce( 'kinboni_nonce' ),
-			'home_url' => home_url( '/' ),
-			'currency' => $currency,
+			'ajax_url'          => admin_url( 'admin-ajax.php' ),
+			'nonce'             => wp_create_nonce( 'kinboni_nonce' ),
+			'home_url'          => home_url( '/' ),
+			'currency'          => $currency,
+			'products'          => $products,
+			'has_user_products' => ! empty( $products ),
+			'admin_url'         => admin_url( 'admin.php?page=kinboni-pro#products' ),
 		];
 	}
 }
