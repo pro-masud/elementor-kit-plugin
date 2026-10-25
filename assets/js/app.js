@@ -437,61 +437,17 @@ function showToast(message, type = "success") {
 }
 
 // ==========================================================================
-// 4. THEME CONTROLLER (Dark / Light Mode)
+// 4. THEME CONTROLLER (Migrated to Module 07: assets/js/modules/theme.js)
 // ==========================================================================
-const ThemeController = {
-  init() {
-    const saved = localStorage.getItem(STORAGE_KEYS.THEME);
-    const systemPrefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    const isDark = saved ? saved === "dark" : systemPrefersDark;
-
-    this.applyTheme(isDark);
-
-    window
-      .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", (e) => {
-        if (!localStorage.getItem(STORAGE_KEYS.THEME)) {
-          this.applyTheme(e.matches);
-        }
-      });
-
-    document.querySelectorAll(".theme-toggle-btn").forEach((btn) => {
-      btn.addEventListener("click", () => this.toggle());
+const ThemeController = (window.KinboniPro && window.KinboniPro.Theme)
+  ? window.KinboniPro.Theme
+  : (window.ThemeController || {
+      isDark: false,
+      init() {},
+      applyTheme() {},
+      toggle() {},
+      isDarkMode() { return false; },
     });
-  },
-
-  applyTheme(isDark) {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-
-    const sunIcons = document.querySelectorAll(".theme-sun-icon");
-    const moonIcons = document.querySelectorAll(".theme-moon-icon");
-
-    if (isDark) {
-      sunIcons.forEach((el) => el.classList.remove("hidden"));
-      moonIcons.forEach((el) => el.classList.add("hidden"));
-    } else {
-      sunIcons.forEach((el) => el.classList.add("hidden"));
-      moonIcons.forEach((el) => el.classList.remove("hidden"));
-    }
-  },
-
-  toggle() {
-    const isDark = document.documentElement.classList.contains("dark");
-    const newTheme = !isDark;
-    this.applyTheme(newTheme);
-    localStorage.setItem(STORAGE_KEYS.THEME, newTheme ? "dark" : "light");
-    showToast(
-      newTheme ? "Dark Mode Activated" : "Light Mode Activated",
-      "info",
-    );
-  },
-};
 
 // ==========================================================================
 // 5. PRODUCT CARD GENERATOR (Ultra-Luxury & Ergonomic)
@@ -509,143 +465,10 @@ function renderStarRating(rating, reviewsCount) {
 }
 
 function createProductCard(product) {
-  const isWishlisted = STATE.wishlist.includes(product.id);
-  const discountPercent = product.originalPrice
-    ? Math.round(
-        ((product.originalPrice - product.price) / product.originalPrice) * 100,
-      )
-    : 0;
-
-  return `
-    <div class="group relative flex flex-col bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-luxury dark:hover:shadow-luxury-dark hover:border-gold-500/40 dark:hover:border-gold-500/40 transition-all duration-500" data-product-id="${product.id}">
-      
-      <!-- Image Container -->
-      <div class="relative w-full aspect-[4/5] bg-stone-100 dark:bg-stone-950 overflow-hidden cursor-pointer" onclick="QuickViewController.open(${product.id})">
-        <!-- Main Image -->
-        <img 
-          src="${product.image}" 
-          alt="${product.name}" 
-          loading="lazy"
-          class="w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105"
-        />
-
-        <!-- Secondary Hover Image -->
-        <img 
-          src="${product.hoverImage}" 
-          alt="${product.name} alternate angle" 
-          loading="lazy"
-          class="absolute inset-0 w-full h-full object-cover object-center opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100 group-hover:scale-105 pointer-events-none"
-        />
-
-        <!-- Badges -->
-        <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-          ${
-            product.badge
-              ? `
-            <span class="inline-block px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full bg-stone-950/90 text-stone-100 dark:bg-white/95 dark:text-stone-950 shadow-md backdrop-blur-sm border border-white/10 dark:border-stone-900/10">
-              ${product.badge}
-            </span>
-          `
-              : ""
-          }
-          ${
-            discountPercent > 0
-              ? `
-            <span class="inline-block px-2 py-0.5 text-[9px] font-bold tracking-wider rounded-full bg-rose-600 text-white shadow-md">
-              -${discountPercent}%
-            </span>
-          `
-              : ""
-          }
-        </div>
-
-        <!-- Wishlist Button -->
-        <button 
-          type="button"
-          onclick="event.stopPropagation(); WishlistController.toggle(${product.id})"
-          aria-label="${isWishlisted ? "Remove from wishlist" : "Add to wishlist"}"
-          class="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 dark:bg-stone-900/90 backdrop-blur-md border border-stone-200/80 dark:border-stone-700/80 flex items-center justify-center text-stone-700 dark:text-stone-200 hover:text-rose-500 dark:hover:text-rose-400 hover:scale-110 active:scale-90 transition-all shadow-sm group/wishbtn"
-        >
-          <svg class="w-4 h-4 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : "fill-transparent"}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </button>
-
-        <!-- Quick View Action Button (Reveals on Hover) -->
-        <div class="absolute inset-x-3 bottom-3 z-10 opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 hidden sm:block">
-          <button 
-            type="button" 
-            onclick="event.stopPropagation(); QuickViewController.open(${product.id})"
-            class="w-full py-2.5 px-4 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md hover:bg-gold-400 hover:text-stone-950 dark:hover:bg-gold-400 dark:hover:text-stone-950 text-stone-900 dark:text-stone-100 text-[11px] font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-          >
-            <i data-lucide="eye" class="w-4 h-4"></i>
-            <span>Quick View</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Card Details -->
-      <div class="p-4 sm:p-5 flex flex-col flex-grow">
-        <!-- Category & Rating -->
-        <div class="flex items-center justify-between gap-2 mb-2 min-w-0">
-          <span class="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-gold-600 dark:text-gold-400 truncate">
-            ${product.categoryLabel}
-          </span>
-          ${renderStarRating(product.rating, product.reviewsCount)}
-        </div>
-
-        <!-- Title -->
-        <h3 class="font-serif text-sm sm:text-base font-medium text-stone-900 dark:text-stone-100 leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] mb-2 group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
-          <a href="javascript:void(0)" onclick="QuickViewController.open(${product.id})">
-            ${product.name}
-          </a>
-        </h3>
-
-        <!-- Price Container -->
-        <div class="flex items-baseline gap-2 mb-3">
-          <span class="font-serif text-base sm:text-lg font-bold text-stone-900 dark:text-white">
-            ${formatCurrency(product.price)}
-          </span>
-          ${
-            product.originalPrice
-              ? `
-            <span class="text-xs text-stone-400 dark:text-stone-500 line-through font-normal">
-              ${formatCurrency(product.originalPrice)}
-            </span>
-            <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 ml-auto">
-              Save ${formatCurrency(product.originalPrice - product.price)}
-            </span>
-          `
-              : ""
-          }
-        </div>
-
-        <!-- Action Buttons (Responsive & Ergonomic Flex Layout) -->
-        <div class="flex items-center gap-2 mt-auto pt-3 border-t border-stone-100 dark:border-stone-800/80">
-          <button 
-            type="button" 
-            onclick="CartController.add(${product.id}, 1)"
-            class="flex-1 py-2.5 px-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-900 dark:text-stone-100 text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95"
-            title="Add to shopping bag"
-          >
-            <i data-lucide="shopping-bag" class="w-3.5 h-3.5 flex-shrink-0 text-stone-600 dark:text-stone-300"></i>
-            <span class="whitespace-nowrap">Add to Bag</span>
-          </button>
-
-          <button 
-            type="button" 
-            onclick="CartController.buyNow(${product.id})"
-            class="flex-1 py-2.5 px-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow-gold-500/25 active:scale-95"
-            title="Direct Order with Cash on Delivery"
-          >
-            <i data-lucide="zap" class="w-3.5 h-3.5 fill-stone-950 flex-shrink-0"></i>
-            <span class="whitespace-nowrap">Order Now</span>
-          </button>
-        </div>
-
-      </div>
-    </div>
-  `;
+  if (typeof window.createProductCard === "function" && window.createProductCard !== createProductCard) {
+    return window.createProductCard(product);
+  }
+  return "";
 }
 
 // ==========================================================================
@@ -739,361 +562,30 @@ const SearchController = (window.KinboniPro && window.KinboniPro.Search)
     });
 
 // ==========================================================================
-// 10. PRODUCT RENDERER & FILTERS
+// 10. PRODUCT RENDERER & FILTERS (Migrated to Module 06: assets/js/modules/product-renderer.js)
 // ==========================================================================
-const ProductRenderer = {
-  renderFeatured() {
-    const grid = document.getElementById("featured-products-grid");
-    if (!grid) return;
-
-    if (!PRODUCTS || PRODUCTS.length === 0) {
-      const adminUrl =
-        typeof kinboni !== "undefined" && kinboni.admin_url
-          ? kinboni.admin_url
-          : "/wp-admin/admin.php?page=kinboni-pro#products";
-      grid.innerHTML = `
-        <div class="col-span-full py-16 px-6 text-center border-2 border-dashed border-stone-200 dark:border-stone-800 rounded-2xl bg-stone-50/50 dark:bg-stone-900/40">
-          <div class="w-14 h-14 rounded-full bg-gold-500/10 text-gold-500 mx-auto flex items-center justify-center mb-4">
-            <i data-lucide="package-plus" class="w-7 h-7"></i>
-          </div>
-          <h3 class="font-serif text-xl sm:text-2xl font-medium text-stone-900 dark:text-white mb-2">No Products Added Yet</h3>
-          <p class="text-xs sm:text-sm text-stone-500 dark:text-stone-400 max-w-md mx-auto mb-6">
-            Create products in your KINBONI Pro Dashboard or run the 1-Click Demo Import to showcase your creations here.
-          </p>
-          <div class="flex items-center justify-center gap-3 flex-wrap">
-            <a href="${adminUrl}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:scale-105 active:scale-95">
-              <i data-lucide="plus" class="w-4 h-4"></i> Add Products in Dashboard
-            </a>
-          </div>
-        </div>
-      `;
-      refreshIcons();
-      return;
-    }
-
-    const featuredList = PRODUCTS.filter((p) => p.featured).slice(0, 8);
-    const displayList =
-      featuredList.length > 0 ? featuredList : PRODUCTS.slice(0, 8);
-    grid.innerHTML = displayList.map((p) => createProductCard(p)).join("");
-    refreshIcons();
-  },
-
-  renderBestSellers(filter = "all") {
-    STATE.activeFilter = filter;
-    const grid = document.getElementById("bestsellers-grid");
-    if (!grid) return;
-
-    if (!PRODUCTS || PRODUCTS.length === 0) {
-      const adminUrl =
-        typeof kinboni !== "undefined" && kinboni.admin_url
-          ? kinboni.admin_url
-          : "/wp-admin/admin.php?page=kinboni-pro#products";
-      grid.innerHTML = `
-        <div class="col-span-full py-16 px-6 text-center border-2 border-dashed border-stone-200 dark:border-stone-800 rounded-2xl bg-stone-50/50 dark:bg-stone-900/40">
-          <div class="w-14 h-14 rounded-full bg-gold-500/10 text-gold-500 mx-auto flex items-center justify-center mb-4">
-            <i data-lucide="package-plus" class="w-7 h-7"></i>
-          </div>
-          <h3 class="font-serif text-xl sm:text-2xl font-medium text-stone-900 dark:text-white mb-2">No Products in Catalogue</h3>
-          <p class="text-xs sm:text-sm text-stone-500 dark:text-stone-400 max-w-md mx-auto mb-6">
-            Add creations from your KINBONI Pro Dashboard to showcase them across your atelier collections.
-          </p>
-          <div class="flex items-center justify-center gap-3 flex-wrap">
-            <a href="${adminUrl}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:scale-105 active:scale-95">
-              <i data-lucide="plus" class="w-4 h-4"></i> Add Products in Dashboard
-            </a>
-          </div>
-        </div>
-      `;
-      refreshIcons();
-      return;
-    }
-
-    let list = [];
-    if (filter === "all") {
-      list = PRODUCTS.filter((p) => p.bestSeller);
-      if (list.length === 0) list = PRODUCTS;
-    } else if (filter === "new") {
-      list = PRODUCTS.filter((p) => p.badge === "NEW");
-    } else if (filter === "sale") {
-      list = PRODUCTS.filter((p) => p.onSale);
-    } else {
-      list = PRODUCTS.filter(
-        (p) =>
-          p.category === filter ||
-          (p.categories &&
-            Array.isArray(p.categories) &&
-            p.categories.includes(filter)),
-      );
-    }
-
-    if (list.length === 0) {
-      grid.innerHTML = `
-        <div class="col-span-full py-12 px-4 text-center border border-dashed border-stone-200 dark:border-stone-800 rounded-2xl bg-stone-50/30 dark:bg-stone-900/20">
-          <p class="text-sm text-stone-500 dark:text-stone-400">No creations found under this discipline filter.</p>
-        </div>
-      `;
-    } else {
-      grid.innerHTML = list.map((p) => createProductCard(p)).join("");
-    }
-
-    document.querySelectorAll(".bestseller-filter-btn").forEach((btn) => {
-      const btnFilter = btn.getAttribute("data-filter");
-      if (btnFilter === filter) {
-        btn.classList.add(
-          "bg-stone-900",
-          "text-white",
-          "dark:bg-gold-400",
-          "dark:text-stone-950",
-          "border-transparent",
-          "shadow-sm",
-        );
-        btn.classList.remove(
-          "bg-transparent",
-          "text-stone-700",
-          "dark:text-stone-300",
-          "border-stone-300",
-          "dark:border-stone-700",
-        );
-      } else {
-        btn.classList.remove(
-          "bg-stone-900",
-          "text-white",
-          "dark:bg-gold-400",
-          "dark:text-stone-950",
-          "border-transparent",
-          "shadow-sm",
-        );
-        btn.classList.add(
-          "bg-transparent",
-          "text-stone-700",
-          "dark:text-stone-300",
-          "border-stone-300",
-          "dark:border-stone-700",
-        );
-      }
+const ProductRenderer = (window.KinboniPro && window.KinboniPro.ProductRenderer)
+  ? window.KinboniPro.ProductRenderer
+  : (window.ProductRenderer || {
+      activeFilter: "all",
+      init() {},
+      renderFeatured() {},
+      renderBestSellers() {},
+      setProducts() {},
     });
-
-    refreshIcons();
-  },
-
-  setProducts(newProducts) {
-    if (Array.isArray(newProducts)) {
-      PRODUCTS = newProducts.slice();
-      this.renderFeatured();
-      this.renderBestSellers(STATE.activeFilter);
-    }
-  },
-};
 
 // ==========================================================================
-// 11. NEWSLETTER & INTERACTION CONTROLLER
+// 11. NEWSLETTER & INTERACTION CONTROLLER (Migrated to Module 10: assets/js/modules/interactions.js)
 // ==========================================================================
-const InteractionController = {
-  closeMobileMenu() {
-    const mobileMenuDrawer = document.getElementById("mobile-menu-drawer");
-    const mobileMenuBackdrop = document.getElementById("mobile-menu-backdrop");
-    if (!mobileMenuDrawer || !mobileMenuBackdrop) return;
-    mobileMenuDrawer.classList.add("-translate-x-full");
-    mobileMenuBackdrop.classList.add("opacity-0");
-    setTimeout(() => {
-      mobileMenuBackdrop.classList.add("hidden");
-    }, 300);
-  },
-
-  init() {
-    // Newsletter validation
-    const newsletterForm = document.getElementById("newsletter-form");
-    if (newsletterForm) {
-      newsletterForm.addEventListener("submit", (e) => {
-        // If external action URL is set, let the browser submit normally
-        if (newsletterForm.getAttribute("action")) {
-          return;
-        }
-
-        e.preventDefault();
-        const emailInput = document.getElementById("newsletter-email");
-        const feedbackEl = document.getElementById("newsletter-feedback");
-        const email = emailInput ? emailInput.value.trim() : "";
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-          if (feedbackEl) {
-            feedbackEl.className =
-              "mt-3 text-xs text-rose-500 font-medium block animate-fade-in";
-            feedbackEl.textContent = "Please enter a valid email address.";
-          }
-          return;
-        }
-
-        const promoCode = newsletterForm.getAttribute("data-promo") || "LUXE20";
-        const customSuccess = newsletterForm.getAttribute("data-success");
-        const successHtml =
-          customSuccess ||
-          `✨ Welcome to The Kinboni Circle! Your VIP invitation and private 20% privilege code (<strong>${promoCode}</strong>) have been delivered.`;
-
-        if (feedbackEl) {
-          feedbackEl.className =
-            "mt-3 text-xs text-emerald-500 dark:text-emerald-400 font-semibold block animate-fade-in";
-          feedbackEl.innerHTML = successHtml;
-        }
-        if (emailInput) emailInput.value = "";
-        showToast("Subscribed to Kinboni VIP Archive", "success");
-
-        // Async WordPress AJAX storage
-        try {
-          const ajaxUrl =
-            typeof kinboni_vars !== "undefined" && kinboni_vars.ajax_url
-              ? kinboni_vars.ajax_url
-              : "/wp-admin/admin-ajax.php";
-          const fd = new FormData();
-          fd.append("action", "kinboni_subscribe_newsletter");
-          fd.append("email", email);
-          fetch(ajaxUrl, { method: "POST", body: fd }).catch(() => {});
-        } catch (err) {}
-      });
-    }
-
-    // Announcement bar dismiss
-    const dismissBtn = document.getElementById("dismiss-announcement-btn");
-    const announcementBar = document.getElementById("announcement-bar");
-    if (dismissBtn && announcementBar) {
-      if (sessionStorage.getItem(STORAGE_KEYS.ANNOUNCEMENT) === "true") {
-        announcementBar.classList.add("hidden");
-      }
-
-      dismissBtn.addEventListener("click", () => {
-        announcementBar.classList.add(
-          "h-0",
-          "opacity-0",
-          "overflow-hidden",
-          "py-0",
-        );
-        setTimeout(() => announcementBar.classList.add("hidden"), 300);
-        sessionStorage.setItem(STORAGE_KEYS.ANNOUNCEMENT, "true");
-      });
-    }
-
-    // Mobile navigation drawer
-    const mobileMenuBtn = document.getElementById("mobile-menu-btn");
-    const mobileMenuDrawer = document.getElementById("mobile-menu-drawer");
-    const mobileMenuBackdrop = document.getElementById("mobile-menu-backdrop");
-    const closeMobileMenuBtn = document.getElementById("close-mobile-menu-btn");
-
-    const toggleMobileMenu = (open) => {
-      if (!mobileMenuDrawer || !mobileMenuBackdrop) return;
-      if (open) {
-        mobileMenuBackdrop.classList.remove("hidden");
-        requestAnimationFrame(() => {
-          mobileMenuBackdrop.classList.remove("opacity-0");
-          mobileMenuDrawer.classList.remove("-translate-x-full");
-        });
-        document.body.classList.add("overflow-hidden");
-      } else {
-        mobileMenuDrawer.classList.add("-translate-x-full");
-        mobileMenuBackdrop.classList.add("opacity-0");
-        setTimeout(() => {
-          mobileMenuBackdrop.classList.add("hidden");
-          document.body.classList.remove("overflow-hidden");
-        }, 300);
-      }
-    };
-
-    if (mobileMenuBtn)
-      mobileMenuBtn.addEventListener("click", () => toggleMobileMenu(true));
-    if (closeMobileMenuBtn)
-      closeMobileMenuBtn.addEventListener("click", () =>
-        toggleMobileMenu(false),
-      );
-    if (mobileMenuBackdrop)
-      mobileMenuBackdrop.addEventListener("click", () =>
-        toggleMobileMenu(false),
-      );
-
-    document.querySelectorAll(".mobile-nav-link").forEach((link) => {
-      link.addEventListener("click", () => toggleMobileMenu(false));
+const InteractionController = (window.KinboniPro && window.KinboniPro.Interactions)
+  ? window.KinboniPro.Interactions
+  : (window.InteractionController || {
+      isMobileMenuOpen: false,
+      openMobileMenu() {},
+      closeMobileMenu() {},
+      toggleMobileMenu() {},
+      init() {},
     });
-
-    // Sticky Header elevation
-    const header = document.getElementById("site-header");
-    window.addEventListener("scroll", () => {
-      if (!header) return;
-      if (window.scrollY > 30) {
-        header.classList.add(
-          "bg-white/95",
-          "dark:bg-stone-950/95",
-          "backdrop-blur-md",
-          "shadow-sm",
-          "border-b",
-          "border-stone-200/60",
-          "dark:border-stone-800/60",
-        );
-      } else {
-        header.classList.remove(
-          "bg-white/95",
-          "dark:bg-stone-950/95",
-          "backdrop-blur-md",
-          "shadow-sm",
-          "border-b",
-          "border-stone-200/60",
-          "dark:border-stone-800/60",
-        );
-      }
-
-      const backToTopBtn = document.getElementById("back-to-top-btn");
-      if (backToTopBtn) {
-        if (window.scrollY > 400) {
-          backToTopBtn.classList.remove(
-            "opacity-0",
-            "pointer-events-none",
-            "translate-y-4",
-          );
-        } else {
-          backToTopBtn.classList.add(
-            "opacity-0",
-            "pointer-events-none",
-            "translate-y-4",
-          );
-        }
-      }
-    });
-
-    const backToTopBtn = document.getElementById("back-to-top-btn");
-    if (backToTopBtn) {
-      backToTopBtn.addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    }
-
-    // Best Sellers filter buttons
-    document.querySelectorAll(".bestseller-filter-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const filter = btn.getAttribute("data-filter");
-        ProductRenderer.renderBestSellers(filter);
-      });
-    });
-
-    // Category click cards (scrolls to bestsellers with proper header offset)
-    document.querySelectorAll(".category-card-trigger").forEach((card) => {
-      card.addEventListener("click", () => {
-        const category = card.getAttribute("data-category");
-        const bestSellersSection = document.getElementById("bestsellers");
-        if (bestSellersSection) {
-          bestSellersSection.scrollIntoView({ behavior: "smooth" });
-          ProductRenderer.renderBestSellers(category);
-          showToast(`Filtered by ${category.toUpperCase()}`, "info");
-        }
-      });
-    });
-
-    // Account modal demo
-    document.querySelectorAll(".open-account-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        showToast("Member Concierge: Welcome back, Patron!", "info");
-      });
-    });
-  },
-};
 
 // ==========================================================================
 // 12. FAST 3-FIELD QUICK ORDER CONTROLLER (Express Cash On Delivery)
@@ -1649,247 +1141,27 @@ function copyPromoCode(code = "LUXE20") {
 }
 
 // ==========================================================================
-// 14. LIVE RECENT SALES POPUP CONTROLLER (15s Loop with Audio Chime)
+// 14. LIVE RECENT SALES POPUP CONTROLLER (Migrated to Module 08: assets/js/modules/live-sales.js)
 // ==========================================================================
-const LiveSalesController = {
-  currentIndex: 0,
-  currentProductId: 1,
-  timerId: null,
-  hideTimerId: null,
-  isPaused: false,
-  displayDuration: 8500, // Stays visible for 8.5 seconds
-  intervalDuration: 15000, // Repeats every 15 seconds
-
-  buyers: [
-    { location: "Gulshan-2, Dhaka", time: "Just now" },
-    { location: "Dhanmondi, Dhaka", time: "1 minute ago" },
-    { location: "Banani, Dhaka", time: "2 minutes ago" },
-    { location: "Uttara Sector 7, Dhaka", time: "Just now" },
-    { location: "GEC Circle, Chittagong", time: "3 minutes ago" },
-    { location: "Sylhet Sadar, Sylhet", time: "1 minute ago" },
-    { location: "Mirpur DOHS, Dhaka", time: "4 minutes ago" },
-    { location: "Motijheel C/A, Dhaka", time: "Just now" },
-    { location: "Khulna Sadar, Khulna", time: "2 minutes ago" },
-    { location: "Bashundhara R/A, Dhaka", time: "5 minutes ago" },
-  ],
-
-  hasUserInteracted: false,
-  audioCtx: null,
-
-  openCurrentProduct() {
-    const product = PRODUCTS.find((p) => p.id === this.currentProductId);
-    if (product) {
-      this.hide();
-      QuickViewController.open(product.id);
-    }
-  },
-
-  playLuxuryChime() {
-    // Only play audio if user has interacted with document to comply with browser autoplay policies
-    if (!this.hasUserInteracted) return;
-
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      if (!this.audioCtx) {
-        this.audioCtx = new AudioCtx();
-      }
-      const ctx = this.audioCtx;
-      if (ctx.state === "suspended") {
-        ctx.resume().catch(() => {});
-      }
-      if (ctx.state !== "running") return;
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "sine";
-      // Harmonic luxury chime: 587.33Hz (D5) glides up to 880Hz (A5)
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
-
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
-    } catch (e) {
-      // Browser autoplay policy fallback
-    }
-  },
-
-  init() {
-    const popup = document.getElementById("live-sales-popup");
-    const card = document.getElementById("live-sales-card");
-    const closeBtn = document.getElementById("close-live-sale-btn");
-
-    if (!popup || !card) return;
-
-    // Listen for any user gesture to safely unlock audio without console warnings
-    const unlockAudio = () => {
-      this.hasUserInteracted = true;
-      ["click", "touchstart", "keydown", "scroll"].forEach((evt) => {
-        window.removeEventListener(evt, unlockAudio);
-      });
-    };
-    ["click", "touchstart", "keydown", "scroll"].forEach((evt) => {
-      window.addEventListener(evt, unlockAudio, { passive: true });
+const LiveSalesController = (window.KinboniPro && window.KinboniPro.LiveSales)
+  ? window.KinboniPro.LiveSales
+  : (window.LiveSalesController || {
+      init() {},
+      showNext() {},
+      hide() {},
+      openCurrentProduct() {},
     });
-
-    // Clicking card opens Quick View modal
-    card.addEventListener("click", (e) => {
-      if (e.target.closest("#close-live-sale-btn")) return;
-      this.openCurrentProduct();
-    });
-
-    // Dismiss button
-    if (closeBtn) {
-      closeBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.hide();
-      });
-    }
-
-    // Hover pauses auto-hide
-    card.addEventListener("mouseenter", () => {
-      this.isPaused = true;
-      if (this.hideTimerId) clearTimeout(this.hideTimerId);
-    });
-
-    card.addEventListener("mouseleave", () => {
-      this.isPaused = false;
-      this.scheduleHide(3000);
-    });
-
-    // First appearance 3.5 seconds after page load
-    setTimeout(() => {
-      this.showNext();
-      this.timerId = setInterval(() => {
-        if (!this.isPaused) {
-          this.showNext();
-        }
-      }, this.intervalDuration);
-    }, 3500);
-  },
-
-  showNext() {
-    const popup = document.getElementById("live-sales-popup");
-    const imgEl = document.getElementById("live-sale-image");
-    const nameEl = document.getElementById("live-sale-name");
-    const priceEl = document.getElementById("live-sale-price");
-    const buyerEl = document.getElementById("live-sale-buyer");
-
-    if (!popup || !imgEl || !nameEl || !priceEl || !buyerEl) return;
-
-    const product = PRODUCTS[this.currentIndex];
-    const buyer = this.buyers[this.currentIndex % this.buyers.length];
-
-    if (!product) return;
-
-    this.currentProductId = product.id;
-
-    imgEl.src = product.image;
-    imgEl.alt = product.name;
-    nameEl.textContent = product.name;
-    priceEl.textContent = formatCurrency(product.price);
-    buyerEl.textContent = `${buyer.location} • ${buyer.time}`;
-
-    // Play gentle audio chime
-    this.playLuxuryChime();
-
-    // Slide up with animation
-    popup.classList.remove("translate-y-8", "opacity-0", "pointer-events-none");
-    popup.classList.add("translate-y-0", "opacity-100");
-
-    refreshIcons();
-
-    // Schedule auto-hide
-    this.scheduleHide(this.displayDuration);
-
-    // Loop to next product
-    this.currentIndex = (this.currentIndex + 1) % PRODUCTS.length;
-  },
-
-  scheduleHide(delay = 8500) {
-    if (this.hideTimerId) clearTimeout(this.hideTimerId);
-    this.hideTimerId = setTimeout(() => {
-      if (!this.isPaused) {
-        this.hide();
-      }
-    }, delay);
-  },
-
-  hide() {
-    const popup = document.getElementById("live-sales-popup");
-    if (!popup) return;
-    popup.classList.remove("translate-y-0", "opacity-100");
-    popup.classList.add("translate-y-8", "opacity-0", "pointer-events-none");
-  },
-};
 
 // ==========================================================================
-// 14B. TESTIMONIAL SLIDER CONTROLLER (Swiper.js)
+// 14B. TESTIMONIAL SLIDER CONTROLLER (Migrated to Module 09: assets/js/modules/testimonials.js)
 // ==========================================================================
-const TestimonialSliderController = {
-  swiperInstance: null,
-
-  init() {
-    const swiperEl = document.querySelector(".testimonial-swiper");
-    if (!swiperEl) return;
-
-    if (typeof Swiper === "undefined") {
-      return;
-    }
-
-    try {
-      this.swiperInstance = new Swiper(".testimonial-swiper", {
-        slidesPerView: 1,
-        spaceBetween: 24,
-        loop: true,
-        speed: 750,
-        grabCursor: true,
-        autoplay: {
-          delay: 4500,
-          disableOnInteraction: false,
-          pauseOnMouseEnter: true,
-        },
-        pagination: {
-          el: ".testimonial-swiper .swiper-pagination",
-          clickable: true,
-        },
-        navigation: {
-          nextEl: "#testimonial-next-btn",
-          prevEl: "#testimonial-prev-btn",
-        },
-        breakpoints: {
-          640: {
-            slidesPerView: 1.5,
-            spaceBetween: 24,
-          },
-          768: {
-            slidesPerView: 2,
-            spaceBetween: 28,
-          },
-          1024: {
-            slidesPerView: 3,
-            spaceBetween: 32,
-          },
-        },
-        on: {
-          init: () => {
-            setTimeout(refreshIcons, 50);
-          },
-        },
-      });
-      refreshIcons();
-    } catch (e) {
-      // Gracefully handle testimonial slider initialization
-    }
-  },
-};
+const TestimonialSliderController = (window.KinboniPro && window.KinboniPro.Testimonials)
+  ? window.KinboniPro.Testimonials
+  : (window.TestimonialSliderController || {
+      swiperInstance: null,
+      init() {},
+      destroy() {},
+    });
 
 // ==========================================================================
 // 15. INITIALIZATION ON DOM READY OR IMMEDIATE IF ALREADY LOADED

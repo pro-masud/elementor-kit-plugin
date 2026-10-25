@@ -448,6 +448,106 @@ class Kinboni_WooCommerce {
 	}
 
 	/**
+	 * Get recent sales notifications directly from WooCommerce orders,
+	 * with graceful fallback to published creations when no orders exist.
+	 *
+	 * @param int $limit Maximum notifications to return (default: 8).
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function get_recent_sales( int $limit = 8 ): array {
+		$notifications = [];
+
+		// 1. Fetch real recent WooCommerce orders
+		if ( function_exists( 'wc_get_orders' ) ) {
+			$orders = wc_get_orders( [
+				'limit'   => $limit,
+				'orderby' => 'date',
+				'order'   => 'DESC',
+				'status'  => [ 'processing', 'completed', 'pending', 'on-hold' ],
+			] );
+
+			if ( ! empty( $orders ) ) {
+				foreach ( $orders as $order ) {
+					$items = $order->get_items();
+					if ( empty( $items ) ) {
+						continue;
+					}
+
+					// Get first product in order
+					$first_item = reset( $items );
+					$product    = $first_item->get_product();
+					if ( ! $product || ! is_a( $product, '\WC_Product' ) ) {
+						continue;
+					}
+
+					$image_id  = $product->get_image_id();
+					$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'thumbnail' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'thumbnail' ) : '' );
+
+					$billing_city  = $order->get_billing_city();
+					$shipping_city = $order->get_shipping_city();
+					$city          = $billing_city ?: ( $shipping_city ?: 'Dhaka' );
+
+					// Format relative time
+					$created_timestamp = $order->get_date_created() ? $order->get_date_created()->getTimestamp() : time();
+					$diff_seconds      = time() - $created_timestamp;
+					$time_label        = $diff_seconds < 120 ? __( 'Just now', 'kinboni-pro' ) : sprintf( __( '%s ago', 'kinboni-pro' ), human_time_diff( $created_timestamp, time() ) );
+
+					$notifications[] = [
+						'id'            => $product->get_id(),
+						'name'          => esc_html( $product->get_name() ),
+						'price'         => (float) $product->get_price(),
+						'formattedPrice'=> self::format_price( (float) $product->get_price() ),
+						'image'         => esc_url( $image_url ),
+						'location'      => sprintf( __( 'Patron in %s', 'kinboni-pro' ), esc_html( $city ) ),
+						'time'          => $time_label,
+						'is_real_order' => true,
+					];
+
+					if ( count( $notifications ) >= $limit ) {
+						break;
+					}
+				}
+			}
+		}
+
+		// 2. Fallback to published products if no orders exist
+		if ( empty( $notifications ) && function_exists( 'wc_get_products' ) ) {
+			$products  = wc_get_products( [ 'limit' => $limit, 'status' => 'publish' ] );
+			$locations = [
+				'Gulshan-2, Dhaka',
+				'Dhanmondi, Dhaka',
+				'Banani, Dhaka',
+				'Uttara Sector 7, Dhaka',
+				'GEC Circle, Chittagong',
+				'Sylhet Sadar, Sylhet',
+				'Mirpur DOHS, Dhaka',
+				'Bashundhara R/A, Dhaka',
+			];
+			$times     = [ 'Just now', '1 minute ago', '2 minutes ago', '4 minutes ago' ];
+
+			foreach ( $products as $idx => $p ) {
+				$image_id  = $p->get_image_id();
+				$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'thumbnail' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'thumbnail' ) : '' );
+				$loc       = $locations[ $idx % count( $locations ) ];
+				$time      = $times[ $idx % count( $times ) ];
+
+				$notifications[] = [
+					'id'            => $p->get_id(),
+					'name'          => esc_html( $p->get_name() ),
+					'price'         => (float) $p->get_price(),
+					'formattedPrice'=> self::format_price( (float) $p->get_price() ),
+					'image'         => esc_url( $image_url ),
+					'location'      => $loc,
+					'time'          => $time,
+					'is_real_order' => false,
+				];
+			}
+		}
+
+		return $notifications;
+	}
+
+	/**
 	 * Ensure WooCommerce cart & session are loaded (needed in AJAX context).
 	 */
 	public static function ensure_cart_loaded(): void {

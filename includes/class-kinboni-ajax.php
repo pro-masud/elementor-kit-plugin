@@ -78,6 +78,10 @@ class Kinboni_Ajax {
 		// ── Live Product Search (Module 05: SearchController) ──
 		add_action( 'wp_ajax_kinboni_search_products',        [ __CLASS__, 'search_products' ] );
 		add_action( 'wp_ajax_nopriv_kinboni_search_products', [ __CLASS__, 'search_products' ] );
+
+		// ── Live Recent Sales Notifications (Module 08: LiveSalesController) ──
+		add_action( 'wp_ajax_kinboni_get_recent_sales',        [ __CLASS__, 'get_recent_sales' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_get_recent_sales', [ __CLASS__, 'get_recent_sales' ] );
 	}
 
 	/**
@@ -443,6 +447,27 @@ class Kinboni_Ajax {
 		try {
 			$data = Kinboni_WooCommerce::search_products( $query, $limit );
 			wp_send_json_success( $data );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 500 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint for recent sales notifications (Module 08: LiveSalesController).
+	 */
+	public static function get_recent_sales(): void {
+		$limit = isset( $_REQUEST['limit'] ) ? absint( $_REQUEST['limit'] ) : 8;
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		try {
+			$data = Kinboni_WooCommerce::get_recent_sales( $limit );
+			wp_send_json_success( [
+				'sales' => $data,
+				'count' => count( $data ),
+			] );
 		} catch ( \Exception $e ) {
 			wp_send_json_error( [ 'message' => $e->getMessage() ], 500 );
 		}
