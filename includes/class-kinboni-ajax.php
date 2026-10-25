@@ -61,6 +61,19 @@ class Kinboni_Ajax {
 
 		add_action( 'wp_ajax_kinboni_remove_coupon',           [ __CLASS__, 'remove_coupon' ] );
 		add_action( 'wp_ajax_nopriv_kinboni_remove_coupon',    [ __CLASS__, 'remove_coupon' ] );
+
+		// ── Wishlist Operations (Module 03: WishlistController) ──
+		add_action( 'wp_ajax_kinboni_get_wishlist',            [ __CLASS__, 'get_wishlist' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_get_wishlist',     [ __CLASS__, 'get_wishlist' ] );
+
+		add_action( 'wp_ajax_kinboni_toggle_wishlist',         [ __CLASS__, 'toggle_wishlist' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_toggle_wishlist',  [ __CLASS__, 'toggle_wishlist' ] );
+
+		add_action( 'wp_ajax_kinboni_remove_wishlist_item',    [ __CLASS__, 'remove_wishlist_item' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_remove_wishlist_item', [ __CLASS__, 'remove_wishlist_item' ] );
+
+		add_action( 'wp_ajax_kinboni_move_wishlist_to_cart',   [ __CLASS__, 'move_wishlist_to_cart' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_move_wishlist_to_cart', [ __CLASS__, 'move_wishlist_to_cart' ] );
 	}
 
 	/**
@@ -355,6 +368,95 @@ class Kinboni_Ajax {
 		try {
 			$payload = Kinboni_WooCommerce::remove_cart_coupon( $code );
 			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Get wishlist items and state.
+	 */
+	public static function get_wishlist(): void {
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$payload = Kinboni_WooCommerce::get_wishlist_payload();
+		wp_send_json_success( $payload );
+	}
+
+	/**
+	 * AJAX endpoint: Toggle product in wishlist.
+	 */
+	public static function toggle_wishlist(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$product_id = sanitize_text_field( wp_unslash( $_POST['product_id'] ?? '' ) );
+		if ( empty( $product_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid product selection.', 'kinboni-pro' ) ], 400 );
+		}
+
+		try {
+			$payload = Kinboni_WooCommerce::toggle_wishlist_item( $product_id );
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Remove product from wishlist.
+	 */
+	public static function remove_wishlist_item(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$product_id = sanitize_text_field( wp_unslash( $_POST['product_id'] ?? '' ) );
+		if ( empty( $product_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid product selection.', 'kinboni-pro' ) ], 400 );
+		}
+
+		try {
+			$payload = Kinboni_WooCommerce::remove_wishlist_item( $product_id );
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Move product from wishlist to cart.
+	 */
+	public static function move_wishlist_to_cart(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$product_id = sanitize_text_field( wp_unslash( $_POST['product_id'] ?? '' ) );
+		$quantity   = max( 1, absint( $_POST['quantity'] ?? 1 ) );
+
+		if ( empty( $product_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid product selection.', 'kinboni-pro' ) ], 400 );
+		}
+
+		try {
+			$result = Kinboni_WooCommerce::move_wishlist_to_bag( $product_id, $quantity );
+			wp_send_json_success( $result );
 		} catch ( \Exception $e ) {
 			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
 		}

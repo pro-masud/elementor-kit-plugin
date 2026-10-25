@@ -16,9 +16,213 @@ class Kinboni_WooCommerce {
 	 * Register hooks.
 	 */
 	public static function init(): void {
-		// Future: add WC-specific hooks here.
-		// Example:
-		// add_filter( 'woocommerce_add_to_cart_fragments', [ __CLASS__, 'cart_fragments' ] );
+		// Sync guest wishlist to customer meta upon login
+		add_action( 'wp_login', [ __CLASS__, 'sync_guest_wishlist_on_login' ], 10, 2 );
+	}
+
+	/**
+	 * Get current customer wishlist product IDs (from user meta or guest cookie).
+	 *
+	 * @return int[]
+	 */
+	public static function get_wishlist_ids(): array {
+		$ids = [];
+
+		if ( is_user_logged_in() ) {
+			$meta = get_user_meta( get_current_user_id(), '_kinboni_wishlist', true );
+			if ( is_array( $meta ) ) {
+				$ids = array_map( 'absint', $meta );
+			}
+		} else {
+			if ( ! empty( $_COOKIE['kinboni_wishlist'] ) ) {
+				$cookie_raw = sanitize_text_field( wp_unslash( $_COOKIE['kinboni_wishlist'] ) );
+				$decoded    = json_decode( $cookie_raw, true );
+				if ( is_array( $decoded ) ) {
+					$ids = array_map( 'absint', $decoded );
+				}
+			}
+		}
+
+		return array_values( array_filter( array_unique( $ids ) ) );
+	}
+
+	/**
+	 * Save wishlist product IDs to user meta or guest cookie.
+	 *
+	 * @param int[] $ids
+	 */
+	public static function save_wishlist_ids( array $ids ): void {
+		$clean_ids = array_values( array_filter( array_unique( array_map( 'absint', $ids ) ) ) );
+
+		if ( is_user_logged_in() ) {
+			update_user_meta( get_current_user_id(), '_kinboni_wishlist', $clean_ids );
+		}
+
+		// Also set cookie so guest state or quick client hydration persists
+		if ( ! headers_sent() ) {
+			setcookie(
+				'kinboni_wishlist',
+				wp_json_encode( $clean_ids ),
+				time() + ( 30 * DAY_IN_SECONDS ),
+				COOKIEPATH,
+				COOKIE_DOMAIN,
+				is_ssl(),
+				false
+			);
+		}
+		$_COOKIE['kinboni_wishlist'] = wp_json_encode( $clean_ids );
+	}
+
+	/**
+	 * Synchronize guest wishlist to user meta when customer logs in.
+	 *
+	 * @param string   $user_login
+	 * @param \WP_User $user
+	 */
+	public static function sync_guest_wishlist_on_login( string $user_login, \WP_User $user ): void {
+		if ( empty( $_COOKIE['kinboni_wishlist'] ) ) {
+			return;
+		}
+
+		$cookie_raw = sanitize_text_field( wp_unslash( $_COOKIE['kinboni_wishlist'] ) );
+		$guest_ids  = json_decode( $cookie_raw, true );
+		if ( ! is_array( $guest_ids ) || empty( $guest_ids ) ) {
+			return;
+		}
+
+		$user_ids = get_user_meta( $user->ID, '_kinboni_wishlist', true );
+		if ( ! is_array( $user_ids ) ) {
+			$user_ids = [];
+		}
+
+		$merged = array_values( array_filter( array_unique( array_merge( $user_ids, array_map( 'absint', $guest_ids ) ) ) ) );
+		update_user_meta( $user->ID, '_kinboni_wishlist', $merged );
+	}
+
+	/**
+	 * Get full wishlist payload with live WooCommerce product details.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function get_wishlist_payload(): array {
+		$ids   = self::get_wishlist_ids();
+		$items = [];
+
+		foreach ( $ids as $id ) {
+			$product = self::resolve_product( $id );
+			if ( ! $product || ! is_a( $product, '\WC_Product' ) ) {
+				continue;
+			}
+
+			$image_id  = $product->get_image_id();
+			$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'medium' ) : '' );
+			$raw_price = (float) $product->get_price();
+
+			$cats           = wp_get_post_terms( $product->get_id(), 'product_cat' );
+			$category_label = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : __( 'Atelier Creation', 'kinboni-pro' );
+
+			$items[] = [
+				'id'             => $product->get_id(),
+				'name'           => $product->get_name(),
+				'price'          => $raw_price,
+				'formattedPrice' => self::format_price( $raw_price ),
+				'regularPrice'   => (float) $product->get_regular_price(),
+				'image'          => $image_url,
+				'permalink'      => $product->get_permalink(),
+				'categoryLabel'  => $category_label,
+				'inStock'        => $product->is_in_stock(),
+			];
+		}
+
+		return [
+			'items'    => $items,
+			'item_ids' => array_column( $items, 'id' ),
+			'count'    => count( $items ),
+			'is_empty' => empty( $items ),
+		];
+	}
+
+	/**
+	 * Toggle product in wishlist (adds if absent, removes if present).
+	 *
+	 * @param int|string $product_id
+	 * @return array<string, mixed>
+	 * @throws \Exception
+	 */
+	public static function toggle_wishlist_item( $product_id ): array {
+		$product = self::resolve_product( $product_id );
+		if ( ! $product ) {
+			throw new \Exception( sprintf( __( 'Product #%d could not be found.', 'kinboni-pro' ), $product_id ) );
+		}
+
+		$real_id = $product->get_id();
+		$ids     = self::get_wishlist_ids();
+
+		$pos = array_search( $real_id, $ids, true );
+		if ( false !== $pos ) {
+			// Remove from wishlist
+			unset( $ids[ $pos ] );
+			$action  = 'removed';
+			$message = sprintf( __( 'Removed "%s" from wishlist', 'kinboni-pro' ), $product->get_name() );
+		} else {
+			// Add to wishlist
+			$ids[]   = $real_id;
+			$action  = 'added';
+			$message = sprintf( __( 'Saved "%s" to wishlist', 'kinboni-pro' ), $product->get_name() );
+		}
+
+		self::save_wishlist_ids( $ids );
+
+		$payload              = self::get_wishlist_payload();
+		$payload['action']    = $action;
+		$payload['message']   = $message;
+		$payload['target_id'] = $real_id;
+
+		return $payload;
+	}
+
+	/**
+	 * Remove a product from the wishlist.
+	 *
+	 * @param int|string $product_id
+	 * @return array<string, mixed>
+	 */
+	public static function remove_wishlist_item( $product_id ): array {
+		$product   = self::resolve_product( $product_id );
+		$target_id = $product ? $product->get_id() : absint( $product_id );
+
+		$ids = self::get_wishlist_ids();
+		$ids = array_diff( $ids, [ $target_id ] );
+
+		self::save_wishlist_ids( $ids );
+
+		$payload              = self::get_wishlist_payload();
+		$payload['action']    = 'removed';
+		$payload['message']   = __( 'Item removed from wishlist.', 'kinboni-pro' );
+		$payload['target_id'] = $target_id;
+
+		return $payload;
+	}
+
+	/**
+	 * Move item from wishlist to cart.
+	 *
+	 * @param int|string $product_id
+	 * @param int        $quantity
+	 * @return array<string, mixed>
+	 */
+	public static function move_wishlist_to_bag( $product_id, int $quantity = 1 ): array {
+		// 1. Add to cart
+		$cart_payload = self::add_to_cart_item( $product_id, $quantity );
+
+		// 2. Remove from wishlist
+		$wishlist_payload = self::remove_wishlist_item( $product_id );
+
+		return [
+			'cart'     => $cart_payload,
+			'wishlist' => $wishlist_payload,
+			'message'  => __( 'Moved creation to your shopping bag!', 'kinboni-pro' ),
+		];
 	}
 
 	/**
