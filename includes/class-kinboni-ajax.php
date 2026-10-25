@@ -74,6 +74,10 @@ class Kinboni_Ajax {
 
 		add_action( 'wp_ajax_kinboni_move_wishlist_to_cart',   [ __CLASS__, 'move_wishlist_to_cart' ] );
 		add_action( 'wp_ajax_nopriv_kinboni_move_wishlist_to_cart', [ __CLASS__, 'move_wishlist_to_cart' ] );
+
+		// ── Live Product Search (Module 05: SearchController) ──
+		add_action( 'wp_ajax_kinboni_search_products',        [ __CLASS__, 'search_products' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_search_products', [ __CLASS__, 'search_products' ] );
 	}
 
 	/**
@@ -422,6 +426,25 @@ class Kinboni_Ajax {
 			wp_send_json_success( $result );
 		} catch ( \Exception $e ) {
 			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint for live product search (Module 05: SearchController).
+	 */
+	public static function search_products(): void {
+		$query = sanitize_text_field( wp_unslash( $_REQUEST['query'] ?? $_REQUEST['q'] ?? '' ) );
+		$limit = isset( $_REQUEST['limit'] ) ? absint( $_REQUEST['limit'] ) : 12;
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		try {
+			$data = Kinboni_WooCommerce::search_products( $query, $limit );
+			wp_send_json_success( $data );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 500 );
 		}
 	}
 }

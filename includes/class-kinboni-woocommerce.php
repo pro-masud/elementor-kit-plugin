@@ -142,6 +142,7 @@ class Kinboni_WooCommerce {
 		];
 	}
 
+
 	/**
 	 * Toggle product in wishlist (adds if absent, removes if present).
 	 *
@@ -225,6 +226,7 @@ class Kinboni_WooCommerce {
 		];
 	}
 
+
 	/**
 	 * Get comprehensive Quick View product payload for WooCommerce product.
 	 *
@@ -292,6 +294,156 @@ class Kinboni_WooCommerce {
 			'inStock'                => $product->is_in_stock(),
 			'stockQuantity'          => $product->managing_stock() ? (int) $product->get_stock_quantity() : null,
 			'specs'                  => $specs,
+		];
+	}
+
+	/**
+	 * Search WooCommerce products by keyword, category, SKU, and specifications.
+	 *
+	 * @param string $query Search keyword.
+	 * @param int    $limit Maximum results to return (default: 12).
+	 * @return array{query: string, total: int, results: array<int, array<string, mixed>>}
+	 */
+	public static function search_products( string $query, int $limit = 12 ): array {
+		$clean_query = trim( sanitize_text_field( $query ) );
+		if ( empty( $clean_query ) ) {
+			return [
+				'query'   => '',
+				'total'   => 0,
+				'results' => [],
+			];
+		}
+
+		$limit       = max( 1, min( 30, $limit ) );
+		$matched_ids = [];
+		$q_lower     = mb_strtolower( $clean_query, 'UTF-8' );
+
+		// 1. Direct WP_Query title & content keyword search
+		$keyword_query = new \WP_Query( [
+			'post_type'      => 'product',
+			'post_status'    => 'publish',
+			's'              => $clean_query,
+			'posts_per_page' => $limit,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		] );
+
+		if ( ! empty( $keyword_query->posts ) ) {
+			foreach ( $keyword_query->posts as $pid ) {
+				$matched_ids[] = (int) $pid;
+			}
+		}
+
+		// 2. Search by SKU if limit not reached
+		if ( count( $matched_ids ) < $limit && function_exists( 'wc_get_product_id_by_sku' ) ) {
+			$sku_id = wc_get_product_id_by_sku( $clean_query );
+			if ( $sku_id && ! in_array( (int) $sku_id, $matched_ids, true ) ) {
+				$matched_ids[] = (int) $sku_id;
+			}
+		}
+
+		// 3. Search by Product Category terms if limit not reached
+		if ( count( $matched_ids ) < $limit ) {
+			$cat_terms = get_terms( [
+				'taxonomy'   => 'product_cat',
+				'name__like' => $clean_query,
+				'hide_empty' => false,
+				'fields'     => 'ids',
+			] );
+
+			if ( ! empty( $cat_terms ) && ! is_wp_error( $cat_terms ) ) {
+				$cat_query = new \WP_Query( [
+					'post_type'      => 'product',
+					'post_status'    => 'publish',
+					'tax_query'      => [
+						[
+							'taxonomy' => 'product_cat',
+							'field'    => 'term_id',
+							'terms'    => $cat_terms,
+						],
+					],
+					'posts_per_page' => $limit - count( $matched_ids ),
+					'post__not_in'   => $matched_ids,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+				] );
+
+				if ( ! empty( $cat_query->posts ) ) {
+					foreach ( $cat_query->posts as $c_pid ) {
+						if ( ! in_array( (int) $c_pid, $matched_ids, true ) ) {
+							$matched_ids[] = (int) $c_pid;
+						}
+					}
+				}
+			}
+		}
+
+		// 4. Fallback search across published products for specs, SKU, and partial match
+		if ( count( $matched_ids ) < $limit && function_exists( 'wc_get_products' ) ) {
+			$all_published = wc_get_products( [
+				'limit'   => 50,
+				'status'  => 'publish',
+				'exclude' => $matched_ids,
+			] );
+
+			foreach ( $all_published as $p_obj ) {
+				$p_title = mb_strtolower( $p_obj->get_name(), 'UTF-8' );
+				$p_desc  = mb_strtolower( $p_obj->get_description() . ' ' . $p_obj->get_short_description(), 'UTF-8' );
+				$p_sku   = mb_strtolower( (string) $p_obj->get_sku(), 'UTF-8' );
+
+				// Check specs meta
+				$specs_meta = get_post_meta( $p_obj->get_id(), '_kinboni_specs', true );
+				$specs_str  = is_array( $specs_meta ) ? implode( ' ', $specs_meta ) : (string) $specs_meta;
+				$specs_str  = mb_strtolower( $specs_str, 'UTF-8' );
+
+				if (
+					str_contains( $p_title, $q_lower ) ||
+					str_contains( $p_desc, $q_lower ) ||
+					str_contains( $p_sku, $q_lower ) ||
+					str_contains( $specs_str, $q_lower )
+				) {
+					$matched_ids[] = (int) $p_obj->get_id();
+					if ( count( $matched_ids ) >= $limit ) {
+						break;
+					}
+				}
+			}
+		}
+
+		// 5. Build authoritative result payloads
+		$results = [];
+		foreach ( $matched_ids as $pid ) {
+			$product = wc_get_product( $pid );
+			if ( ! $product || ! is_a( $product, '\WC_Product' ) ) {
+				continue;
+			}
+
+			$image_id  = $product->get_image_id();
+			$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'medium' ) : '' );
+			$raw_price = (float) $product->get_price();
+			$reg_price = (float) $product->get_regular_price();
+			$is_sale   = $product->is_on_sale() || ( $reg_price > $raw_price && $raw_price > 0 );
+			$cats      = wp_get_post_terms( $product->get_id(), 'product_cat' );
+			$cat_name  = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : __( 'Atelier Creation', 'kinboni-pro' );
+
+			$results[] = [
+				'id'             => $product->get_id(),
+				'name'           => esc_html( $product->get_name() ),
+				'price'          => $raw_price,
+				'formattedPrice' => self::format_price( $raw_price ),
+				'originalPrice'  => $is_sale ? $reg_price : null,
+				'image'          => esc_url( $image_url ),
+				'category'       => sanitize_title( $cat_name ),
+				'categoryLabel'  => esc_html( $cat_name ),
+				'inStock'        => $product->is_in_stock(),
+				'permalink'      => esc_url( $product->get_permalink() ),
+			];
+		}
+
+		return [
+			'query'   => $clean_query,
+			'total'   => count( $results ),
+			'results' => $results,
 		];
 	}
 
@@ -506,6 +658,7 @@ class Kinboni_WooCommerce {
 			'is_empty'                => empty( $items ),
 		];
 	}
+
 
 	/**
 	 * Add product to WooCommerce cart.
@@ -785,6 +938,7 @@ class Kinboni_WooCommerce {
 			'type'          => $product->get_type(),
 		];
 	}
+
 
 	/**
 	 * Query products by various criteria.
@@ -1102,5 +1256,6 @@ class Kinboni_WooCommerce {
 			'message'          => sprintf( __( 'Order #%s placed successfully! Thank you for choosing Kinboni.', 'kinboni-pro' ), $order->get_order_number() ),
 		];
 	}
+
 }
 

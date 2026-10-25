@@ -726,157 +726,17 @@ const QuickViewController = (window.KinboniPro && window.KinboniPro.QuickView)
     });
 
 // ==========================================================================
-// 9. SEARCH CONTROLLER
+// 9. SEARCH CONTROLLER (Migrated to Module 05: assets/js/modules/search.js)
 // ==========================================================================
-const SearchController = {
-  debounceTimer: null,
-
-  init() {
-    const searchModal = document.getElementById("search-modal");
-    const searchInput = document.getElementById("search-input");
-    const searchBackdrop = document.getElementById("search-backdrop");
-    const closeBtn = document.getElementById("close-search-btn");
-
-    document.querySelectorAll(".open-search-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        this.open();
-      });
+const SearchController = (window.KinboniPro && window.KinboniPro.Search)
+  ? window.KinboniPro.Search
+  : (window.SearchController || {
+      debounceTimer: null,
+      init() {},
+      open() {},
+      close() {},
+      search() {},
     });
-
-    if (searchBackdrop)
-      searchBackdrop.addEventListener("click", () => this.close());
-    if (closeBtn) closeBtn.addEventListener("click", () => this.close());
-
-    if (searchInput) {
-      searchInput.addEventListener("input", (e) => {
-        clearTimeout(this.debounceTimer);
-        this.debounceTimer = setTimeout(() => {
-          this.search(e.target.value.trim());
-        }, 150);
-      });
-    }
-
-    document.querySelectorAll(".search-suggestion-tag").forEach((tag) => {
-      tag.addEventListener("click", () => {
-        const query = tag.getAttribute("data-query");
-        if (searchInput && query) {
-          clearTimeout(this.debounceTimer);
-          searchInput.value = query;
-          this.search(query);
-        }
-      });
-    });
-
-    window.addEventListener("keydown", (e) => {
-      if (
-        e.key === "Escape" &&
-        searchModal &&
-        !searchModal.classList.contains("hidden")
-      ) {
-        this.close();
-      }
-    });
-  },
-
-  open() {
-    InteractionController.closeMobileMenu();
-    const modal = document.getElementById("search-modal");
-    const input = document.getElementById("search-input");
-    if (modal) {
-      modal.classList.remove("hidden");
-      document.body.classList.add("overflow-hidden");
-      setTimeout(() => {
-        if (input) input.focus();
-      }, 100);
-      this.search(input ? input.value.trim() : "");
-    }
-  },
-
-  close() {
-    const modal = document.getElementById("search-modal");
-    if (modal) {
-      modal.classList.add("hidden");
-      document.body.classList.remove("overflow-hidden");
-    }
-  },
-
-  search(query) {
-    const resultsContainer = document.getElementById(
-      "search-results-container",
-    );
-    const countEl = document.getElementById("search-count");
-    if (!resultsContainer) return;
-
-    if (!query) {
-      resultsContainer.innerHTML = `
-        <div class="py-12 text-center text-stone-400 dark:text-stone-500">
-          <i data-lucide="search" class="w-10 h-10 mx-auto mb-3 opacity-30"></i>
-          <p class="text-sm">Search the Kinboni Atelier archive by product name, category, or materials...</p>
-        </div>
-      `;
-      if (countEl) countEl.textContent = "Explore All Creations";
-      refreshIcons();
-      return;
-    }
-
-    const q = query.toLowerCase();
-    const matches = PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.categoryLabel.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q),
-    );
-
-    if (countEl) {
-      countEl.textContent = `${matches.length} creation${matches.length === 1 ? "" : "s"} discovered`;
-    }
-
-    if (matches.length === 0) {
-      resultsContainer.innerHTML = `
-        <div class="py-12 text-center">
-          <i data-lucide="package-search" class="w-10 h-10 mx-auto mb-3 text-stone-400 opacity-40"></i>
-          <h4 class="font-serif text-lg font-medium text-stone-900 dark:text-stone-100 mb-1">No Creations Found</h4>
-          <p class="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
-            We couldn't find any creations matching "${query}". Try searching for "Timepiece", "Leather", "Oud", or "Silk".
-          </p>
-        </div>
-      `;
-      refreshIcons();
-      return;
-    }
-
-    resultsContainer.innerHTML = `
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        ${matches
-          .map(
-            (product) => `
-          <div class="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200/60 dark:border-stone-700/60 hover:border-gold-500 transition-colors cursor-pointer group" onclick="SearchController.close(); QuickViewController.open(${product.id});">
-            <img src="${product.image}" alt="${product.name}" class="w-14 h-16 object-cover rounded-lg bg-stone-200 flex-shrink-0" />
-            <div class="min-w-0 flex-grow">
-              <span class="text-[10px] uppercase font-bold tracking-wider text-gold-600 dark:text-gold-400">${product.categoryLabel}</span>
-              <h5 class="font-serif text-xs font-semibold text-stone-900 dark:text-stone-100 truncate group-hover:text-gold-500 transition-colors">${product.name}</h5>
-              <span class="text-xs font-bold text-stone-900 dark:text-white">${formatCurrency(product.price)}</span>
-            </div>
-            <button 
-              type="button" 
-              onclick="event.stopPropagation(); CartController.add(${product.id}, 1);" 
-              class="w-8 h-8 rounded-full bg-stone-900 text-white dark:bg-white dark:text-stone-950 flex items-center justify-center hover:bg-gold-500 hover:text-stone-950 transition-colors shadow-sm flex-shrink-0"
-              aria-label="Add to bag"
-            >
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        `,
-          )
-          .join("")}
-      </div>
-    `;
-
-    refreshIcons();
-  },
-};
 
 // ==========================================================================
 // 10. PRODUCT RENDERER & FILTERS
