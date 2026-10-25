@@ -40,17 +40,27 @@ class Kinboni_Ajax {
 		add_action( 'wp_ajax_kinboni_create_cod_order',        [ __CLASS__, 'create_cod_order' ] );
 		add_action( 'wp_ajax_nopriv_kinboni_create_cod_order', [ __CLASS__, 'create_cod_order' ] );
 
-		// ── Add to Cart ───────────────────────────────────────
-		// add_action( 'wp_ajax_kinboni_add_to_cart',        [ __CLASS__, 'add_to_cart' ] );
-		// add_action( 'wp_ajax_nopriv_kinboni_add_to_cart', [ __CLASS__, 'add_to_cart' ] );
+		// ── Cart Operations (Module 02: CartController) ──────
+		add_action( 'wp_ajax_kinboni_get_cart',                 [ __CLASS__, 'get_cart' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_get_cart',          [ __CLASS__, 'get_cart' ] );
 
-		// ── Get Cart ──────────────────────────────────────────
-		// add_action( 'wp_ajax_kinboni_get_cart',        [ __CLASS__, 'get_cart' ] );
-		// add_action( 'wp_ajax_nopriv_kinboni_get_cart', [ __CLASS__, 'get_cart' ] );
+		add_action( 'wp_ajax_kinboni_add_to_cart',             [ __CLASS__, 'add_to_cart' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_add_to_cart',      [ __CLASS__, 'add_to_cart' ] );
 
-		// ── Checkout ──────────────────────────────────────────
-		// add_action( 'wp_ajax_kinboni_checkout',        [ __CLASS__, 'process_checkout' ] );
-		// add_action( 'wp_ajax_nopriv_kinboni_checkout', [ __CLASS__, 'process_checkout' ] );
+		add_action( 'wp_ajax_kinboni_update_cart_quantity',    [ __CLASS__, 'update_cart_quantity' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_update_cart_quantity', [ __CLASS__, 'update_cart_quantity' ] );
+
+		add_action( 'wp_ajax_kinboni_remove_cart_item',         [ __CLASS__, 'remove_cart_item' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_remove_cart_item',  [ __CLASS__, 'remove_cart_item' ] );
+
+		add_action( 'wp_ajax_kinboni_clear_cart',              [ __CLASS__, 'clear_cart' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_clear_cart',       [ __CLASS__, 'clear_cart' ] );
+
+		add_action( 'wp_ajax_kinboni_apply_coupon',            [ __CLASS__, 'apply_coupon' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_apply_coupon',     [ __CLASS__, 'apply_coupon' ] );
+
+		add_action( 'wp_ajax_kinboni_remove_coupon',           [ __CLASS__, 'remove_coupon' ] );
+		add_action( 'wp_ajax_nopriv_kinboni_remove_coupon',    [ __CLASS__, 'remove_coupon' ] );
 	}
 
 	/**
@@ -185,6 +195,166 @@ class Kinboni_Ajax {
 			$result = Kinboni_WooCommerce::create_cod_order( $_POST );
 			set_transient( $lock_key, 1, 15 );
 			wp_send_json_success( $result );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Get full WooCommerce cart payload.
+	 */
+	public static function get_cart(): void {
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$payload = Kinboni_WooCommerce::get_cart_payload();
+		wp_send_json_success( $payload );
+	}
+
+	/**
+	 * AJAX endpoint: Add item to WooCommerce cart.
+	 */
+	public static function add_to_cart(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$product_id = sanitize_text_field( wp_unslash( $_POST['product_id'] ?? '' ) );
+		$quantity   = max( 1, absint( $_POST['quantity'] ?? 1 ) );
+		$color      = sanitize_text_field( wp_unslash( $_POST['color'] ?? '' ) );
+		$size       = sanitize_text_field( wp_unslash( $_POST['size'] ?? '' ) );
+		$title      = sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) );
+
+		if ( empty( $product_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid product selection.', 'kinboni-pro' ) ], 400 );
+		}
+
+		try {
+			$payload = Kinboni_WooCommerce::add_to_cart_item( $product_id, $quantity, $color, $size, $title );
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Update item quantity in WooCommerce cart.
+	 */
+	public static function update_cart_quantity(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$key_or_id = sanitize_text_field( wp_unslash( $_POST['key'] ?? ( $_POST['product_id'] ?? '' ) ) );
+		$is_delta  = isset( $_POST['delta'] );
+		$val       = $is_delta ? intval( $_POST['delta'] ) : intval( $_POST['quantity'] ?? 1 );
+
+		if ( empty( $key_or_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid cart item.', 'kinboni-pro' ) ], 400 );
+		}
+
+		try {
+			$payload = Kinboni_WooCommerce::update_cart_quantity( $key_or_id, $val, $is_delta );
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Remove item from WooCommerce cart.
+	 */
+	public static function remove_cart_item(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$key_or_id = sanitize_text_field( wp_unslash( $_POST['key'] ?? ( $_POST['product_id'] ?? '' ) ) );
+
+		if ( empty( $key_or_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid cart item.', 'kinboni-pro' ) ], 400 );
+		}
+
+		try {
+			$payload = Kinboni_WooCommerce::remove_cart_item( $key_or_id );
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Empty the WooCommerce cart.
+	 */
+	public static function clear_cart(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		try {
+			$payload = Kinboni_WooCommerce::clear_cart();
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Apply coupon code to WooCommerce cart.
+	 */
+	public static function apply_coupon(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$code = sanitize_text_field( wp_unslash( $_POST['code'] ?? '' ) );
+
+		try {
+			$payload = Kinboni_WooCommerce::apply_cart_coupon( $code );
+			wp_send_json_success( $payload );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
+		}
+	}
+
+	/**
+	 * AJAX endpoint: Remove coupon code from WooCommerce cart.
+	 */
+	public static function remove_coupon(): void {
+		if ( ! self::verify_nonce() ) {
+			wp_send_json_error( [ 'message' => __( 'Security verification failed. Please reload the page.', 'kinboni-pro' ) ], 403 );
+		}
+
+		if ( ! class_exists( 'Kinboni_WooCommerce' ) ) {
+			wp_send_json_error( [ 'message' => __( 'WooCommerce engine is unavailable.', 'kinboni-pro' ) ], 500 );
+		}
+
+		$code = sanitize_text_field( wp_unslash( $_POST['code'] ?? '' ) );
+
+		try {
+			$payload = Kinboni_WooCommerce::remove_cart_coupon( $code );
+			wp_send_json_success( $payload );
 		} catch ( \Exception $e ) {
 			wp_send_json_error( [ 'message' => $e->getMessage() ], 400 );
 		}

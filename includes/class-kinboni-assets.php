@@ -78,18 +78,28 @@ class Kinboni_Assets {
 			true
 		);
 
-		// KINBONI Storefront Engine JS (Full eCommerce & UI engine).
+		// KINBONI Cart Engine JS (Module 02: Shopping Bag & Cart Drawer).
 		wp_register_script(
-			'kinboni-app',
-			KINBONI_URL . 'assets/js/app.js',
-			[ 'jquery', 'lucide-icons', 'swiper-bundle', 'kinboni-pro' ],
+			'kinboni-cart',
+			KINBONI_URL . 'assets/js/modules/cart.js',
+			[ 'jquery', 'lucide-icons', 'kinboni-pro' ],
 			KINBONI_VERSION,
 			true
 		);
 
-		// Localize parameters on both handles so 'window.kinboni' is always defined.
+		// KINBONI Storefront Engine JS (Full eCommerce & UI engine).
+		wp_register_script(
+			'kinboni-app',
+			KINBONI_URL . 'assets/js/app.js',
+			[ 'jquery', 'lucide-icons', 'swiper-bundle', 'kinboni-pro', 'kinboni-cart' ],
+			KINBONI_VERSION,
+			true
+		);
+
+		// Localize parameters on handles so 'window.kinboni' is always defined.
 		$js_data = self::get_js_data();
 		wp_localize_script( 'kinboni-pro', 'kinboni', $js_data );
+		wp_localize_script( 'kinboni-cart', 'kinboni', $js_data );
 		wp_localize_script( 'kinboni-app', 'kinboni', $js_data );
 	}
 
@@ -155,6 +165,7 @@ class Kinboni_Assets {
 		wp_enqueue_script( 'lucide-icons' );
 		wp_enqueue_script( 'swiper-bundle' );
 		wp_enqueue_script( 'kinboni-pro' );
+		wp_enqueue_script( 'kinboni-cart' );
 		wp_enqueue_script( 'kinboni-app' );
 	}
 
@@ -188,6 +199,7 @@ class Kinboni_Assets {
 		}
 
 		$products = class_exists( 'Kinboni_Products' ) ? Kinboni_Products::get_storefront_products() : [];
+		$cart     = class_exists( 'Kinboni_WooCommerce' ) ? Kinboni_WooCommerce::get_cart_payload() : null;
 
 		return [
 			'ajax_url'          => admin_url( 'admin-ajax.php' ),
@@ -197,6 +209,7 @@ class Kinboni_Assets {
 			'products'          => $products,
 			'has_user_products' => ! empty( $products ),
 			'admin_url'         => admin_url( 'admin.php?page=kinboni-pro#products' ),
+			'cart'              => $cart,
 		];
 	}
 }

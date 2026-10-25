@@ -29,21 +29,467 @@ class Kinboni_WooCommerce {
 			return;
 		}
 
-		if ( ! did_action( 'woocommerce_init' ) || ! did_action( 'woocommerce_after_register_taxonomy' ) ) {
+		if ( is_null( WC()->session ) ) {
+			$session_class = apply_filters( 'woocommerce_session_handler', '\WC_Session_Handler' );
+			if ( class_exists( $session_class ) ) {
+				WC()->session = new $session_class();
+				WC()->session->init();
+			}
+		}
+
+		if ( is_null( WC()->customer ) && class_exists( '\WC_Customer' ) ) {
+			WC()->customer = new \WC_Customer( get_current_user_id(), true );
+		}
+
+		if ( is_null( WC()->cart ) && class_exists( '\WC_Cart' ) ) {
+			WC()->cart = new \WC_Cart();
+			WC()->cart->get_cart_from_session();
+		}
+	}
+
+	/**
+	 * Smart product resolver: resolves product by ID, demo SKU, or title.
+	 *
+	 * @param int|string $product_id Product ID or demo ID.
+	 * @param string     $title      Optional product name fallback.
+	 * @return \WC_Product|null
+	 */
+	public static function resolve_product( $product_id, string $title = '' ): ?\WC_Product {
+		$product_id = absint( $product_id );
+		$product    = $product_id ? wc_get_product( $product_id ) : null;
+
+		// Intelligent Fallback 1: Resolve by Demo SKU if ID is 1..12
+		if ( ! $product && $product_id <= 12 && function_exists( 'wc_get_product_id_by_sku' ) ) {
+			$demo_sku  = sprintf( 'KB-DEMO-%02d', $product_id );
+			$mapped_id = wc_get_product_id_by_sku( $demo_sku );
+			if ( $mapped_id ) {
+				$product = wc_get_product( $mapped_id );
+			}
+		}
+
+		// Intelligent Fallback 2: Resolve by Product Title
+		if ( ! $product && ! empty( $title ) ) {
+			$matched_post = get_page_by_title( sanitize_text_field( $title ), OBJECT, 'product' );
+			if ( $matched_post ) {
+				$product = wc_get_product( $matched_post->ID );
+			}
+		}
+
+		// Intelligent Fallback 3: Resolve by index among published WooCommerce products
+		if ( ! $product && function_exists( 'wc_get_products' ) ) {
+			$available_products = wc_get_products( [ 'limit' => 12, 'status' => 'publish' ] );
+			if ( ! empty( $available_products ) ) {
+				$target_index = ( $product_id > 0 && $product_id <= count( $available_products ) )
+					? ( $product_id - 1 )
+					: 0;
+				$product = $available_products[ $target_index ] ?? null;
+			}
+		}
+
+		return $product;
+	}
+
+	/**
+	 * Ensure default Atelier VIP privilege coupons exist in WooCommerce.
+	 *
+	 * @param string $code
+	 */
+	public static function ensure_atelier_coupon_exists( string $code ): void {
+		if ( ! function_exists( 'wc_get_coupon_id_by_code' ) ) {
 			return;
 		}
 
-		if ( is_null( WC()->session ) ) {
-			WC()->session = new \WC_Session_Handler();
-			WC()->session->init();
+		$clean_code  = strtoupper( sanitize_text_field( trim( $code ) ) );
+		$existing_id = wc_get_coupon_id_by_code( $clean_code );
+		if ( $existing_id ) {
+			return;
 		}
-		if ( is_null( WC()->customer ) ) {
-			WC()->customer = new \WC_Customer( get_current_user_id(), true );
+
+		$promos = [
+			'LUXE20'    => 20,
+			'KINBONI10' => 10,
+			'WELCOME'   => 15,
+		];
+
+		if ( isset( $promos[ $clean_code ] ) && class_exists( '\WC_Coupon' ) ) {
+			$coupon = new \WC_Coupon();
+			$coupon->set_code( $clean_code );
+			$coupon->set_discount_type( 'percent' );
+			$coupon->set_amount( $promos[ $clean_code ] );
+			$coupon->set_description( __( 'Kinboni Atelier VIP Privilege Voucher', 'kinboni-pro' ) );
+			$coupon->set_individual_use( true );
+			$coupon->save();
 		}
-		if ( is_null( WC()->cart ) ) {
-			WC()->cart = new \WC_Cart();
-			WC()->cart->get_cart();
+	}
+
+	/**
+	 * Get the full authoritative WooCommerce Cart payload for KINBONI frontend.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function get_cart_payload(): array {
+		self::ensure_cart_loaded();
+
+		$wc_cart = function_exists( 'WC' ) ? WC()->cart : null;
+		if ( ! $wc_cart ) {
+			return [
+				'items'                   => [],
+				'item_count'              => 0,
+				'subtotal'                => 0,
+				'subtotal_formatted'      => self::format_price( 0 ),
+				'discount_total'          => 0,
+				'discount_formatted'      => self::format_price( 0 ),
+				'total'                   => 0,
+				'total_formatted'         => self::format_price( 0 ),
+				'free_shipping_threshold' => 2500,
+				'free_shipping_unlocked'  => false,
+				'free_shipping_remaining' => 2500,
+				'free_shipping_progress'  => 0,
+				'coupons'                 => [],
+				'is_empty'                => true,
+			];
 		}
+
+		$items    = [];
+		$subtotal = 0.0;
+
+		foreach ( $wc_cart->get_cart() as $cart_item_key => $cart_item ) {
+			/** @var \WC_Product $product */
+			$product = $cart_item['data'] ?? null;
+			if ( ! $product || ! is_a( $product, '\WC_Product' ) ) {
+				continue;
+			}
+
+			$product_id = $product->get_id();
+			$quantity   = (int) ( $cart_item['quantity'] ?? 1 );
+			$price      = (float) $product->get_price();
+			$line_total = (float) ( $cart_item['line_total'] ?? ( $price * $quantity ) );
+			$subtotal  += $line_total;
+
+			$image_id  = $product->get_image_id();
+			$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'medium' ) : '' );
+
+			$cats           = wp_get_post_terms( $product_id, 'product_cat' );
+			$category_label = ( ! empty( $cats ) && ! is_wp_error( $cats ) ) ? $cats[0]->name : __( 'Atelier Creation', 'kinboni-pro' );
+
+			$items[] = [
+				'key'                  => $cart_item_key,
+				'id'                   => $product_id,
+				'name'                 => $product->get_name(),
+				'price'                => $price,
+				'price_formatted'      => self::format_price( $price ),
+				'quantity'             => $quantity,
+				'line_total'           => $line_total,
+				'line_total_formatted' => self::format_price( $line_total ),
+				'image'                => $image_url,
+				'categoryLabel'        => $category_label,
+				'color'                => $cart_item['kinboni_color'] ?? '',
+				'size'                 => $cart_item['kinboni_size'] ?? '',
+				'in_stock'             => $product->is_in_stock(),
+				'max_quantity'         => $product->managing_stock() ? (int) $product->get_stock_quantity() : 99,
+			];
+		}
+
+		$free_shipping_threshold = 2500.0;
+		$wc_subtotal             = (float) $wc_cart->get_subtotal();
+		if ( 0.0 === $wc_subtotal ) {
+			$wc_subtotal = $subtotal;
+		}
+
+		$wc_discount = (float) $wc_cart->get_discount_total();
+		$wc_total    = (float) $wc_cart->get_total( 'edit' );
+		if ( 0.0 === $wc_total && $subtotal > 0 ) {
+			$wc_total = max( 0.0, $subtotal - $wc_discount );
+		}
+
+		$applied_coupons = [];
+		foreach ( $wc_cart->get_applied_coupons() as $coupon_code ) {
+			$coupon_obj = new \WC_Coupon( $coupon_code );
+			$applied_coupons[] = [
+				'code'     => $coupon_code,
+				'amount'   => (float) $coupon_obj->get_amount(),
+				'type'     => $coupon_obj->get_discount_type(),
+				'discount' => self::format_price( $wc_discount ),
+			];
+		}
+
+		$is_free   = $wc_subtotal >= $free_shipping_threshold;
+		$remaining = max( 0.0, $free_shipping_threshold - $wc_subtotal );
+		$progress  = min( 100, (int) round( ( $wc_subtotal / $free_shipping_threshold ) * 100 ) );
+
+		return [
+			'items'                   => $items,
+			'item_count'              => (int) $wc_cart->get_cart_contents_count(),
+			'subtotal'                => $wc_subtotal,
+			'subtotal_formatted'      => self::format_price( $wc_subtotal ),
+			'discount_total'          => $wc_discount,
+			'discount_formatted'      => self::format_price( $wc_discount ),
+			'total'                   => $wc_total,
+			'total_formatted'         => self::format_price( $wc_total ),
+			'free_shipping_threshold' => $free_shipping_threshold,
+			'free_shipping_unlocked'  => $is_free,
+			'free_shipping_remaining' => $remaining,
+			'free_shipping_progress'  => $progress,
+			'coupons'                 => $applied_coupons,
+			'is_empty'                => empty( $items ),
+		];
+	}
+
+	/**
+	 * Add product to WooCommerce cart.
+	 *
+	 * @param int|string $product_id Product ID or demo ID.
+	 * @param int        $quantity   Quantity to add.
+	 * @param string     $color      Selected color variation/option.
+	 * @param string     $size       Selected size option.
+	 * @param string     $title      Optional title fallback.
+	 * @return array<string, mixed> Updated cart payload.
+	 * @throws \Exception When product cannot be added.
+	 */
+	public static function add_to_cart_item( $product_id, int $quantity = 1, string $color = '', string $size = '', string $title = '' ): array {
+		self::ensure_cart_loaded();
+
+		$product = self::resolve_product( $product_id, $title );
+		if ( ! $product ) {
+			throw new \Exception( sprintf( __( 'Product #%d could not be found.', 'kinboni-pro' ), $product_id ) );
+		}
+
+		if ( ! $product->is_purchasable() ) {
+			throw new \Exception( sprintf( __( 'Product "%s" is not currently purchasable.', 'kinboni-pro' ), $product->get_name() ) );
+		}
+
+		if ( ! $product->is_in_stock() ) {
+			throw new \Exception( sprintf( __( 'Product "%s" is out of stock.', 'kinboni-pro' ), $product->get_name() ) );
+		}
+
+		$quantity = max( 1, $quantity );
+		if ( $product->managing_stock() && $product->get_stock_quantity() < $quantity ) {
+			throw new \Exception( sprintf( __( 'Only %d units available for "%s".', 'kinboni-pro' ), $product->get_stock_quantity(), $product->get_name() ) );
+		}
+
+		$cart_item_data = [];
+		if ( ! empty( $color ) && 'Standard' !== $color ) {
+			$cart_item_data['kinboni_color'] = sanitize_text_field( $color );
+		}
+		if ( ! empty( $size ) ) {
+			$cart_item_data['kinboni_size'] = sanitize_text_field( $size );
+		}
+
+		if ( WC()->session && ! WC()->session->has_session() ) {
+			WC()->session->set_customer_session_cookie( true );
+		}
+
+		$cart_item_key = WC()->cart->add_to_cart( $product->get_id(), $quantity, 0, [], $cart_item_data );
+
+		if ( ! $cart_item_key ) {
+			throw new \Exception( sprintf( __( 'Failed to add "%s" to shopping bag.', 'kinboni-pro' ), $product->get_name() ) );
+		}
+
+		WC()->cart->calculate_totals();
+
+		$payload               = self::get_cart_payload();
+		$payload['added_item'] = [
+			'id'   => $product->get_id(),
+			'name' => $product->get_name(),
+			'key'  => $cart_item_key,
+		];
+		$payload['message']    = sprintf( __( '"%s" added to shopping bag!', 'kinboni-pro' ), $product->get_name() );
+
+		return $payload;
+	}
+
+	/**
+	 * Update quantity of an item in the WooCommerce cart.
+	 *
+	 * @param string|int $key_or_id Cart item key or Product ID.
+	 * @param int        $delta_or_quantity Quantity value or delta.
+	 * @param bool       $is_delta True if updating by delta (+1/-1), false if setting absolute quantity.
+	 * @return array<string, mixed> Updated cart payload.
+	 * @throws \Exception
+	 */
+	public static function update_cart_quantity( $key_or_id, int $delta_or_quantity, bool $is_delta = false ): array {
+		self::ensure_cart_loaded();
+
+		$cart = WC()->cart;
+		if ( ! $cart ) {
+			throw new \Exception( __( 'WooCommerce cart unavailable.', 'kinboni-pro' ) );
+		}
+
+		$target_key  = null;
+		$current_qty = 0;
+
+		// Check if $key_or_id is a valid cart item key
+		if ( is_string( $key_or_id ) && isset( $cart->get_cart()[ $key_or_id ] ) ) {
+			$target_key  = $key_or_id;
+			$current_qty = $cart->get_cart()[ $key_or_id ]['quantity'];
+		} else {
+			// Find by product id or demo id
+			$resolved_product = self::resolve_product( $key_or_id );
+			$pid              = $resolved_product ? $resolved_product->get_id() : absint( $key_or_id );
+
+			foreach ( $cart->get_cart() as $k => $item ) {
+				$item_pid     = (int) ( $item['product_id'] ?? 0 );
+				$item_data_id = ( isset( $item['data'] ) && is_a( $item['data'], '\WC_Product' ) ) ? $item['data']->get_id() : 0;
+				if ( $item_pid === $pid || $item_data_id === $pid ) {
+					$target_key  = $k;
+					$current_qty = $item['quantity'];
+					break;
+				}
+			}
+		}
+
+		if ( ! $target_key ) {
+			throw new \Exception( __( 'Item not found in shopping bag.', 'kinboni-pro' ) );
+		}
+
+		$new_quantity = $is_delta ? ( $current_qty + $delta_or_quantity ) : $delta_or_quantity;
+
+		if ( $new_quantity <= 0 ) {
+			$cart->remove_cart_item( $target_key );
+			$message = __( 'Item removed from shopping bag.', 'kinboni-pro' );
+		} else {
+			$cart->set_quantity( $target_key, $new_quantity );
+			$message = __( 'Shopping bag updated.', 'kinboni-pro' );
+		}
+
+		$cart->calculate_totals();
+
+		$payload            = self::get_cart_payload();
+		$payload['message'] = $message;
+
+		return $payload;
+	}
+
+	/**
+	 * Remove an item from the WooCommerce cart.
+	 *
+	 * @param string|int $key_or_id Cart item key or Product ID.
+	 * @return array<string, mixed> Updated cart payload.
+	 * @throws \Exception
+	 */
+	public static function remove_cart_item( $key_or_id ): array {
+		self::ensure_cart_loaded();
+
+		$cart = WC()->cart;
+		if ( ! $cart ) {
+			throw new \Exception( __( 'WooCommerce cart unavailable.', 'kinboni-pro' ) );
+		}
+
+		$target_key = null;
+
+		if ( is_string( $key_or_id ) && isset( $cart->get_cart()[ $key_or_id ] ) ) {
+			$target_key = $key_or_id;
+		} else {
+			$resolved_product = self::resolve_product( $key_or_id );
+			$pid              = $resolved_product ? $resolved_product->get_id() : absint( $key_or_id );
+
+			foreach ( $cart->get_cart() as $k => $item ) {
+				$item_pid     = (int) ( $item['product_id'] ?? 0 );
+				$item_data_id = ( isset( $item['data'] ) && is_a( $item['data'], '\WC_Product' ) ) ? $item['data']->get_id() : 0;
+				if ( $item_pid === $pid || $item_data_id === $pid ) {
+					$target_key = $k;
+					break;
+				}
+			}
+		}
+
+		if ( $target_key ) {
+			$cart->remove_cart_item( $target_key );
+			$cart->calculate_totals();
+		}
+
+		$payload            = self::get_cart_payload();
+		$payload['message'] = __( 'Item removed from bag.', 'kinboni-pro' );
+
+		return $payload;
+	}
+
+	/**
+	 * Empty the WooCommerce cart.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function clear_cart(): array {
+		self::ensure_cart_loaded();
+		if ( WC()->cart ) {
+			WC()->cart->empty_cart();
+		}
+
+		$payload            = self::get_cart_payload();
+		$payload['message'] = __( 'Shopping bag cleared.', 'kinboni-pro' );
+
+		return $payload;
+	}
+
+	/**
+	 * Apply coupon to WooCommerce cart.
+	 *
+	 * @param string $code
+	 * @return array<string, mixed>
+	 * @throws \Exception
+	 */
+	public static function apply_cart_coupon( string $code ): array {
+		self::ensure_cart_loaded();
+
+		$clean_code = strtoupper( sanitize_text_field( trim( $code ) ) );
+		if ( empty( $clean_code ) ) {
+			throw new \Exception( __( 'Please enter a voucher code (try "LUXE20").', 'kinboni-pro' ) );
+		}
+
+		self::ensure_atelier_coupon_exists( $clean_code );
+
+		$cart = WC()->cart;
+		if ( ! $cart ) {
+			throw new \Exception( __( 'WooCommerce cart unavailable.', 'kinboni-pro' ) );
+		}
+
+		if ( $cart->has_discount( $clean_code ) ) {
+			throw new \Exception( sprintf( __( 'Coupon "%s" has already been applied.', 'kinboni-pro' ), $clean_code ) );
+		}
+
+		$result = $cart->apply_coupon( $clean_code );
+		if ( ! $result && ! $cart->has_discount( $clean_code ) ) {
+			$notices = function_exists( 'wc_get_notices' ) ? wc_get_notices( 'error' ) : [];
+			$err_msg = ! empty( $notices ) ? wp_strip_all_tags( $notices[0]['notice'] ?? '' ) : sprintf( __( 'Coupon "%s" is invalid.', 'kinboni-pro' ), $clean_code );
+			if ( function_exists( 'wc_clear_notices' ) ) {
+				wc_clear_notices();
+			}
+			throw new \Exception( $err_msg );
+		}
+
+		if ( function_exists( 'wc_clear_notices' ) ) {
+			wc_clear_notices();
+		}
+
+		$cart->calculate_totals();
+
+		$payload            = self::get_cart_payload();
+		$payload['message'] = sprintf( __( 'Promo code "%s" applied successfully!', 'kinboni-pro' ), $clean_code );
+
+		return $payload;
+	}
+
+	/**
+	 * Remove coupon from WooCommerce cart.
+	 *
+	 * @param string $code
+	 * @return array<string, mixed>
+	 */
+	public static function remove_cart_coupon( string $code ): array {
+		self::ensure_cart_loaded();
+
+		$clean_code = strtoupper( sanitize_text_field( trim( $code ) ) );
+		$cart       = WC()->cart;
+
+		if ( $cart && ! empty( $clean_code ) ) {
+			$cart->remove_coupon( $clean_code );
+			$cart->calculate_totals();
+		}
+
+		$payload            = self::get_cart_payload();
+		$payload['message'] = __( 'Promo code removed.', 'kinboni-pro' );
+
+		return $payload;
 	}
 
 	/**
@@ -165,37 +611,9 @@ class Kinboni_WooCommerce {
 				continue;
 			}
 
-			$product = wc_get_product( $product_id );
-
-			// Intelligent Fallback 1: Resolve by Demo SKU if ID is a demo index (1..12)
-			if ( ! $product && $product_id <= 12 && function_exists( 'wc_get_product_id_by_sku' ) ) {
-				$demo_sku  = sprintf( 'KB-DEMO-%02d', $product_id );
-				$mapped_id = wc_get_product_id_by_sku( $demo_sku );
-				if ( $mapped_id ) {
-					$product    = wc_get_product( $mapped_id );
-					$product_id = $mapped_id;
-				}
-			}
-
-			// Intelligent Fallback 2: Resolve by Product Title
-			if ( ! $product && ! empty( $raw_item['name'] ) ) {
-				$matched_post = get_page_by_title( sanitize_text_field( $raw_item['name'] ), OBJECT, 'product' );
-				if ( $matched_post ) {
-					$product    = wc_get_product( $matched_post->ID );
-					$product_id = $matched_post->ID;
-				}
-			}
-
-			// Intelligent Fallback 3: Resolve by index among published WooCommerce products
-			if ( ! $product && function_exists( 'wc_get_products' ) ) {
-				$available_products = wc_get_products( [ 'limit' => 12, 'status' => 'publish' ] );
-				if ( ! empty( $available_products ) ) {
-					$target_index = ( $product_id > 0 && $product_id <= count( $available_products ) )
-						? ( $product_id - 1 )
-						: 0;
-					$product    = $available_products[ $target_index ];
-					$product_id = $product->get_id();
-				}
+			$product = self::resolve_product( $product_id, $raw_item['name'] ?? '' );
+			if ( $product ) {
+				$product_id = $product->get_id();
 			}
 
 			if ( ! $product ) {
