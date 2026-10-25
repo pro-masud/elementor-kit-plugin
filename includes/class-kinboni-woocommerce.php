@@ -226,6 +226,76 @@ class Kinboni_WooCommerce {
 	}
 
 	/**
+	 * Get comprehensive Quick View product payload for WooCommerce product.
+	 *
+	 * @param int|string $product_id
+	 * @return array<string, mixed>
+	 * @throws \Exception
+	 */
+	public static function get_quick_view_data( $product_id ): array {
+		$product = self::resolve_product( $product_id );
+		if ( ! $product ) {
+			throw new \Exception( sprintf( __( 'Product #%s could not be found.', 'kinboni-pro' ), $product_id ) );
+		}
+
+		$image_id = $product->get_image_id();
+		$main_img = $image_id ? wp_get_attachment_image_url( $image_id, 'large' ) : ( function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'large' ) : '' );
+
+		$gallery = [ $main_img ];
+		foreach ( $product->get_gallery_image_ids() as $gid ) {
+			$gurl = wp_get_attachment_image_url( $gid, 'large' );
+			if ( $gurl && ! in_array( $gurl, $gallery, true ) ) {
+				$gallery[] = $gurl;
+			}
+		}
+
+		$cats     = wp_get_post_terms( $product->get_id(), 'product_cat' );
+		$cat_name = ! empty( $cats ) && ! is_wp_error( $cats ) ? $cats[0]->name : __( 'Fine Collection', 'kinboni-pro' );
+
+		$raw_price     = (float) $product->get_price();
+		$regular_price = (float) $product->get_regular_price();
+		$is_on_sale    = $product->is_on_sale() || ( $regular_price > $raw_price && $raw_price > 0 );
+		$discount_pct  = ( $is_on_sale && $regular_price > 0 ) ? (int) round( ( ( $regular_price - $raw_price ) / $regular_price ) * 100 ) : 0;
+
+		$rating        = $product->get_average_rating() ? (float) $product->get_average_rating() : 5.0;
+		$reviews_count = $product->get_review_count() ?: 18;
+
+		$short_desc = wp_strip_all_tags( $product->get_short_description() ?: $product->get_description() );
+		if ( empty( $short_desc ) ) {
+			$short_desc = __( 'Mastercrafted with the utmost precision and artisanal heritage.', 'kinboni-pro' );
+		}
+
+		$specs = [
+			__( 'Authentic Certified Craftsmanship', 'kinboni-pro' ),
+			__( 'Complimentary Insured Shipping', 'kinboni-pro' ),
+			__( '7-Day Return Guarantee', 'kinboni-pro' ),
+			__( 'Kinboni Atelier Serial Verification', 'kinboni-pro' ),
+		];
+
+		return [
+			'id'                     => $product->get_id(),
+			'name'                   => $product->get_name(),
+			'price'                  => $raw_price,
+			'formattedPrice'         => self::format_price( $raw_price ),
+			'originalPrice'          => $is_on_sale ? $regular_price : null,
+			'formattedOriginalPrice' => $is_on_sale ? self::format_price( $regular_price ) : '',
+			'discountPercent'        => $discount_pct,
+			'badge'                  => $cat_name,
+			'categoryLabel'          => $cat_name,
+			'image'                  => $gallery[0] ?? $main_img,
+			'hoverImage'             => count( $gallery ) > 1 ? $gallery[1] : ( $gallery[0] ?? $main_img ),
+			'gallery'                => $gallery,
+			'description'            => $short_desc,
+			'permalink'              => $product->get_permalink(),
+			'rating'                 => $rating,
+			'reviewsCount'           => $reviews_count,
+			'inStock'                => $product->is_in_stock(),
+			'stockQuantity'          => $product->managing_stock() ? (int) $product->get_stock_quantity() : null,
+			'specs'                  => $specs,
+		];
+	}
+
+	/**
 	 * Ensure WooCommerce cart & session are loaded (needed in AJAX context).
 	 */
 	public static function ensure_cart_loaded(): void {
@@ -279,14 +349,12 @@ class Kinboni_WooCommerce {
 			}
 		}
 
-		// Intelligent Fallback 3: Resolve by index among published WooCommerce products
-		if ( ! $product && function_exists( 'wc_get_products' ) ) {
+		// Intelligent Fallback 3: Resolve by index for demo IDs 1..12 among published WooCommerce products
+		if ( ! $product && $product_id > 0 && $product_id <= 12 && function_exists( 'wc_get_products' ) ) {
 			$available_products = wc_get_products( [ 'limit' => 12, 'status' => 'publish' ] );
 			if ( ! empty( $available_products ) ) {
-				$target_index = ( $product_id > 0 && $product_id <= count( $available_products ) )
-					? ( $product_id - 1 )
-					: 0;
-				$product = $available_products[ $target_index ] ?? null;
+				$target_index = ( $product_id - 1 ) % count( $available_products );
+				$product      = $available_products[ $target_index ] ?? null;
 			}
 		}
 
