@@ -591,15 +591,15 @@
             const confirmedPhone = document.getElementById('confirmed-customer-phone');
             const confirmedAddress = document.getElementById('confirmed-customer-address');
             const confirmedTotal = document.getElementById('confirmed-order-total');
-            const waLink = document.getElementById('confirmed-whatsapp-link');
+            const receiptLink = document.getElementById('confirmed-order-details-link');
 
             if (confirmedName) confirmedName.textContent = data.customer_name;
             if (confirmedOrderId) confirmedOrderId.textContent = '#' + data.order_number;
             if (confirmedPhone) confirmedPhone.textContent = data.customer_phone;
             if (confirmedAddress) confirmedAddress.textContent = data.customer_address;
             if (confirmedTotal) confirmedTotal.textContent = data.formatted_total;
-            if (waLink && data.whatsapp_url) {
-              waLink.href = data.whatsapp_url;
+            if (receiptLink && data.order_received_url) {
+              receiptLink.href = data.order_received_url;
             }
 
             if (formView) formView.classList.add('hidden');

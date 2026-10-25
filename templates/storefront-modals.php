@@ -442,7 +442,7 @@ defined( 'ABSPATH' ) || exit;
         <?php esc_html_e( 'Thank You,', 'kinboni-pro' ); ?> <span id="confirmed-customer-name" class="text-gold-600 dark:text-gold-400"></span>!
       </h3>
       <p class="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto mb-6 font-light">
-        <?php esc_html_e( 'Your bespoke order has been accepted. Our concierge team will reach out shortly for dispatch.', 'kinboni-pro' ); ?>
+        <?php esc_html_e( 'Your order has been recorded in WooCommerce. You can view your invoice receipt below or continue shopping.', 'kinboni-pro' ); ?>
       </p>
 
       <div class="p-4 sm:p-5 rounded-2xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 text-xs text-left mb-6 space-y-2.5">
@@ -470,13 +470,12 @@ defined( 'ABSPATH' ) || exit;
 
       <div class="space-y-3">
         <a 
-          id="confirmed-whatsapp-link" 
+          id="confirmed-order-details-link" 
           href="#" 
-          target="_blank" 
-          class="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+          class="w-full py-3.5 px-4 bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold uppercase tracking-wider rounded-xl shadow-md hover:shadow-gold-500/25 transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
         >
-          <i data-lucide="message-circle" class="w-4 h-4"></i>
-          <span><?php esc_html_e( 'Send Order Confirmation on WhatsApp', 'kinboni-pro' ); ?></span>
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span><?php esc_html_e( 'View Order Details & Receipt', 'kinboni-pro' ); ?></span>
         </a>
 
         <button 

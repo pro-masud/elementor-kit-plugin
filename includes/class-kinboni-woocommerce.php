@@ -1340,20 +1340,20 @@ class Kinboni_WooCommerce {
 		$whatsapp_url = 'https://wa.me/' . $wa_clean . '?text=' . rawurlencode( $wa_msg );
 
 		return [
-			'success'          => true,
-			'order_id'         => $order->get_id(),
-			'order_number'     => $order->get_order_number(),
-			'customer_name'    => $customer_name,
-			'customer_phone'   => $customer_phone,
-			'customer_address' => $customer_address,
-			'delivery_zone'    => $delivery_zone,
-			'subtotal'         => $order_subtotal,
-			'delivery_fee'     => $delivery_fee,
-			'discount'         => $discount_amount,
-			'total'            => $final_total,
-			'formatted_total'  => $plain_total_str,
-			'whatsapp_url'     => $whatsapp_url,
-			'message'          => sprintf( __( 'Order #%s placed successfully! Thank you for choosing Kinboni.', 'kinboni-pro' ), $order->get_order_number() ),
+			'success'            => true,
+			'order_id'           => $order->get_id(),
+			'order_number'       => $order->get_order_number(),
+			'order_received_url' => $order->get_checkout_order_received_url(),
+			'customer_name'      => $customer_name,
+			'customer_phone'     => $customer_phone,
+			'customer_address'   => $customer_address,
+			'delivery_zone'      => $delivery_zone,
+			'subtotal'           => $order_subtotal,
+			'delivery_fee'       => $delivery_fee,
+			'discount'           => $discount_amount,
+			'total'              => $final_total,
+			'formatted_total'    => $plain_total_str,
+			'message'            => sprintf( __( 'Order #%s placed successfully! Thank you for choosing Kinboni.', 'kinboni-pro' ), $order->get_order_number() ),
 		];
 	}
 

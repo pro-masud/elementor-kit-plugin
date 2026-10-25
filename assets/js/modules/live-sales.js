@@ -39,7 +39,10 @@
     currentProductId: null,
     timerId: null,
     hideTimerId: null,
+    startTimerId: null,
     isPaused: false,
+    isInitialized: false,
+    lastChimeTime: 0,
     displayDuration: 8500, // Stays visible for 8.5 seconds
     intervalDuration: 15000, // Configurable via admin settings
     hasUserInteracted: false,
@@ -58,6 +61,10 @@
     ],
 
     init() {
+      // Guard against multiple initializations
+      if (this.isInitialized) return;
+      this.isInitialized = true;
+
       // Check admin setting
       if (window.kinboni && window.kinboni.sales_popup_enabled === false) {
         return;
@@ -72,6 +79,11 @@
       const closeBtn = document.getElementById('close-live-sale-btn');
 
       if (!popup || !card) return;
+
+      // Clean existing timers to ensure single active cycle
+      if (this.startTimerId) clearTimeout(this.startTimerId);
+      if (this.timerId) clearInterval(this.timerId);
+      if (this.hideTimerId) clearTimeout(this.hideTimerId);
 
       // 1. Initialize sales list from server localized data
       if (window.kinboni && Array.isArray(window.kinboni.recent_sales) && window.kinboni.recent_sales.length > 0) {
@@ -90,32 +102,32 @@
       });
 
       // 3. Card click opens Quick View modal
-      card.addEventListener('click', (e) => {
+      card.onclick = (e) => {
         if (e.target.closest('#close-live-sale-btn')) return;
         this.openCurrentProduct();
-      });
+      };
 
       // 4. Dismiss button
       if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
+        closeBtn.onclick = (e) => {
           e.stopPropagation();
           this.hide();
-        });
+        };
       }
 
       // 5. Hover pauses auto-hide
-      card.addEventListener('mouseenter', () => {
+      card.onmouseenter = () => {
         this.isPaused = true;
         if (this.hideTimerId) clearTimeout(this.hideTimerId);
-      });
+      };
 
-      card.addEventListener('mouseleave', () => {
+      card.onmouseleave = () => {
         this.isPaused = false;
         this.scheduleHide(3000);
-      });
+      };
 
-      // 6. First appearance after 3.5 seconds
-      setTimeout(() => {
+      // 6. First appearance after 3.5 seconds (single timer)
+      this.startTimerId = setTimeout(() => {
         this.showNext();
         this.timerId = setInterval(() => {
           if (!this.isPaused) {
@@ -138,6 +150,13 @@
       if (!this.hasUserInteracted) return;
       if (window.kinboni && window.kinboni.sales_chime_enabled === false) return;
 
+      // Strict cooldown guard: never play more than once within 4 seconds
+      const now = Date.now();
+      if (now - this.lastChimeTime < 4000) {
+        return;
+      }
+      this.lastChimeTime = now;
+
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
@@ -158,7 +177,7 @@
         osc.frequency.setValueAtTime(587.33, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
 
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
 
         osc.connect(gain);
