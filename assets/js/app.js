@@ -669,174 +669,23 @@ const CartController = (window.KinboniPro && window.KinboniPro.Cart)
       updateBadges() {},
     });
 
-// 7. WISHLIST CONTROLLER
+// 7. WISHLIST CONTROLLER (Migrated to Module 03: assets/js/modules/wishlist.js)
 // ==========================================================================
-const WishlistController = {
-  init() {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.WISHLIST);
-      STATE.wishlist = saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      STATE.wishlist = [];
-    }
-
-    this.updateBadges();
-
-    document.querySelectorAll(".open-wishlist-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        this.open();
-      });
+const WishlistController = (window.KinboniPro && window.KinboniPro.Wishlist)
+  ? window.KinboniPro.Wishlist
+  : (window.WishlistController || {
+      init() {},
+      open() {},
+      close() {},
+      toggle() {},
+      remove() {},
+      moveToBag() {},
+      moveToCart() {},
+      render() {},
+      updateBadges() {},
+      updateHeartButtons() {},
     });
 
-    const backdrop = document.getElementById("wishlist-drawer-backdrop");
-    if (backdrop) backdrop.addEventListener("click", () => this.close());
-
-    const closeBtn = document.getElementById("close-wishlist-btn");
-    if (closeBtn) closeBtn.addEventListener("click", () => this.close());
-  },
-
-  save() {
-    localStorage.setItem(STORAGE_KEYS.WISHLIST, JSON.stringify(STATE.wishlist));
-    this.updateBadges();
-  },
-
-  toggle(productId) {
-    let product = PRODUCTS.find(
-      (p) => p.id === productId || p.id === Number(productId),
-    );
-    if (
-      !product &&
-      typeof QuickViewController !== "undefined" &&
-      QuickViewController.currentProduct &&
-      (QuickViewController.currentProduct.id === productId ||
-        QuickViewController.currentProduct.id === Number(productId))
-    ) {
-      product = QuickViewController.currentProduct;
-      PRODUCTS.push(product);
-    }
-    if (!product) return;
-
-    const index = STATE.wishlist.indexOf(product.id);
-    if (index > -1) {
-      STATE.wishlist.splice(index, 1);
-      showToast(`Removed "${product.name}" from wishlist`, "info");
-    } else {
-      STATE.wishlist.push(product.id);
-      showToast(`Saved "${product.name}" to wishlist`, "success");
-    }
-
-    this.save();
-    this.render();
-
-    ProductRenderer.renderFeatured();
-    ProductRenderer.renderBestSellers(STATE.activeFilter);
-  },
-
-  updateBadges() {
-    const count = STATE.wishlist.length;
-    document.querySelectorAll(".wishlist-count-badge").forEach((badge) => {
-      badge.textContent = count;
-      if (count > 0) {
-        badge.classList.remove("scale-0");
-        badge.classList.add("scale-100");
-      } else {
-        badge.classList.remove("scale-100");
-        badge.classList.add("scale-0");
-      }
-    });
-  },
-
-  open() {
-    InteractionController.closeMobileMenu();
-    CartController.close();
-    this.render();
-    const drawer = document.getElementById("wishlist-drawer");
-    const backdrop = document.getElementById("wishlist-drawer-backdrop");
-    if (drawer && backdrop) {
-      backdrop.classList.remove("hidden");
-      requestAnimationFrame(() => {
-        backdrop.classList.remove("opacity-0");
-        drawer.classList.remove("translate-x-full");
-      });
-      document.body.classList.add("overflow-hidden");
-    }
-  },
-
-  close() {
-    const drawer = document.getElementById("wishlist-drawer");
-    const backdrop = document.getElementById("wishlist-drawer-backdrop");
-    if (drawer && backdrop) {
-      drawer.classList.add("translate-x-full");
-      backdrop.classList.add("opacity-0");
-      setTimeout(() => {
-        backdrop.classList.add("hidden");
-        document.body.classList.remove("overflow-hidden");
-      }, 300);
-    }
-  },
-
-  render() {
-    const container = document.getElementById("wishlist-items-container");
-    const emptyState = document.getElementById("wishlist-empty-state");
-    if (!container) return;
-
-    if (STATE.wishlist.length === 0) {
-      container.innerHTML = "";
-      if (emptyState) emptyState.classList.remove("hidden");
-      return;
-    }
-
-    if (emptyState) emptyState.classList.add("hidden");
-
-    const html = STATE.wishlist
-      .map((id) => {
-        const product = PRODUCTS.find((p) => p.id === id);
-        if (!product) return "";
-
-        return `
-        <div class="flex items-center gap-4 p-3.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-800">
-          <img 
-            src="${product.image}" 
-            alt="${product.name}" 
-            class="w-16 h-20 object-cover object-center rounded-lg bg-stone-200 dark:bg-stone-900 flex-shrink-0"
-          />
-          <div class="flex-grow min-w-0">
-            <h4 class="font-serif text-sm font-medium text-stone-900 dark:text-stone-100 truncate mb-1">
-              ${product.name}
-            </h4>
-            <div class="text-xs font-bold text-stone-900 dark:text-stone-100 mb-2">
-              ${formatCurrency(product.price)}
-            </div>
-            <div class="flex items-center gap-2">
-              <button 
-                type="button" 
-                onclick="CartController.add(${product.id}, 1); WishlistController.toggle(${product.id})"
-                class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider bg-gold-400 hover:bg-gold-500 text-stone-950 rounded-lg transition-colors shadow-sm"
-              >
-                Move to Bag
-              </button>
-              <button 
-                type="button" 
-                onclick="WishlistController.toggle(${product.id})"
-                class="text-xs text-stone-400 hover:text-rose-500 transition-colors p-1.5"
-                aria-label="Remove from wishlist"
-              >
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-      })
-      .join("");
-
-    container.innerHTML = html;
-    refreshIcons();
-  },
-};
-
-// ==========================================================================
 // 8. QUICK VIEW MODAL CONTROLLER (With Dynamic Thumbnail Switching)
 // ==========================================================================
 function registerProduct(product) {

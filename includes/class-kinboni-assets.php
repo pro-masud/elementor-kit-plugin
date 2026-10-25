@@ -87,11 +87,20 @@ class Kinboni_Assets {
 			true
 		);
 
+		// KINBONI Wishlist Engine JS (Module 03: Saved Wishlist Drawer).
+		wp_register_script(
+			'kinboni-wishlist',
+			KINBONI_URL . 'assets/js/modules/wishlist.js',
+			[ 'jquery', 'lucide-icons', 'kinboni-pro', 'kinboni-cart' ],
+			KINBONI_VERSION,
+			true
+		);
+
 		// KINBONI Storefront Engine JS (Full eCommerce & UI engine).
 		wp_register_script(
 			'kinboni-app',
 			KINBONI_URL . 'assets/js/app.js',
-			[ 'jquery', 'lucide-icons', 'swiper-bundle', 'kinboni-pro', 'kinboni-cart' ],
+			[ 'jquery', 'lucide-icons', 'swiper-bundle', 'kinboni-pro', 'kinboni-cart', 'kinboni-wishlist' ],
 			KINBONI_VERSION,
 			true
 		);
@@ -100,6 +109,7 @@ class Kinboni_Assets {
 		$js_data = self::get_js_data();
 		wp_localize_script( 'kinboni-pro', 'kinboni', $js_data );
 		wp_localize_script( 'kinboni-cart', 'kinboni', $js_data );
+		wp_localize_script( 'kinboni-wishlist', 'kinboni', $js_data );
 		wp_localize_script( 'kinboni-app', 'kinboni', $js_data );
 	}
 
@@ -166,6 +176,7 @@ class Kinboni_Assets {
 		wp_enqueue_script( 'swiper-bundle' );
 		wp_enqueue_script( 'kinboni-pro' );
 		wp_enqueue_script( 'kinboni-cart' );
+		wp_enqueue_script( 'kinboni-wishlist' );
 		wp_enqueue_script( 'kinboni-app' );
 	}
 
@@ -200,6 +211,7 @@ class Kinboni_Assets {
 
 		$products = class_exists( 'Kinboni_Products' ) ? Kinboni_Products::get_storefront_products() : [];
 		$cart     = class_exists( 'Kinboni_WooCommerce' ) ? Kinboni_WooCommerce::get_cart_payload() : null;
+		$wishlist = class_exists( 'Kinboni_WooCommerce' ) ? Kinboni_WooCommerce::get_wishlist_payload() : null;
 
 		return [
 			'ajax_url'          => admin_url( 'admin-ajax.php' ),
@@ -210,6 +222,7 @@ class Kinboni_Assets {
 			'has_user_products' => ! empty( $products ),
 			'admin_url'         => admin_url( 'admin.php?page=kinboni-pro#products' ),
 			'cart'              => $cart,
+			'wishlist'          => $wishlist,
 		];
 	}
 }
